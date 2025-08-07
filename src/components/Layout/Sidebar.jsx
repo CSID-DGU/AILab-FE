@@ -1,0 +1,118 @@
+import { Link, useLocation } from "react-router-dom";
+import {
+  HomeIcon,
+  UserIcon,
+  ServerIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+  CogIcon,
+  UsersIcon,
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
+
+const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
+  const location = useLocation();
+
+  const isActive = (path) => {
+    return location.pathname === path;
+  };
+
+  const userMenuItems = [
+    { name: "대시보드", href: "/dashboard", icon: HomeIcon },
+    { name: "서버 신청", href: "/application", icon: ServerIcon },
+    { name: "신청 현황", href: "/requests", icon: ClipboardDocumentListIcon },
+    { name: "계정 설정", href: "/account", icon: UserIcon },
+  ];
+
+  const adminMenuItems = [
+    { name: "대시보드", href: "/admin/dashboard", icon: HomeIcon },
+    { name: "신청 관리", href: "/admin/applications", icon: DocumentTextIcon },
+    { name: "사용자 관리", href: "/admin/users", icon: UsersIcon },
+    { name: "리소스 모니터링", href: "/admin/monitoring", icon: ChartBarIcon },
+    { name: "컨테이너 관리", href: "/admin/containers", icon: ServerIcon },
+    { name: "시스템 설정", href: "/admin/settings", icon: CogIcon },
+  ];
+
+  const menuItems = userRole === "ADMIN" ? adminMenuItems : userMenuItems;
+
+  return (
+    <aside
+      className={`bg-gray-900 text-white transition-all duration-300 overflow-hidden ${
+        isCollapsed ? "w-16" : "w-64"
+      } min-h-screen flex flex-col`}
+    >
+      {/* Logo Section */}
+      <div className="p-4 border-b border-gray-700 overflow-hidden">
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-[#F68313] flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-sm">AI</span>
+          </div>
+          <div
+            className={`ml-3 transition-all duration-300 ${
+              isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            }`}
+          >
+            <span className="text-lg font-semibold whitespace-nowrap">
+              DGU AI Lab
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 mt-6 overflow-hidden">
+        <ul className="space-y-2 px-3">
+          {menuItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  className={`flex items-center px-3 py-2 transition-colors duration-200 overflow-hidden ${
+                    isActive(item.href)
+                      ? "bg-[#F68313] text-white"
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                  }`}
+                >
+                  <IconComponent className="w-5 h-5 flex-shrink-0" />
+                  <div
+                    className={`ml-3 transition-all duration-300 ${
+                      isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                    }`}
+                  >
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      {item.name}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* User Role Badge */}
+      <div className="p-4 border-t border-gray-700 overflow-hidden">
+        <div className="flex items-center">
+          <div
+            className={`transition-all duration-300 ${
+              isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            }`}
+          >
+            <div
+              className={`px-2 py-1 text-xs font-medium whitespace-nowrap ${
+                userRole === "ADMIN"
+                  ? "bg-red-600 text-white"
+                  : "bg-green-600 text-white"
+              }`}
+            >
+              {userRole === "ADMIN" ? "관리자" : "사용자"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
