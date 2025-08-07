@@ -364,8 +364,8 @@ const ServerApplicationPage = ({ user }) => {
                   icon={CircleStackIcon}
                 />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
                     <CpuChipIcon className="w-4 h-4 inline mr-1" />
                     CUDA 버전 *
                   </label>
@@ -373,7 +373,7 @@ const ServerApplicationPage = ({ user }) => {
                     name="cuda_version"
                     value={formData.cuda_version}
                     onChange={handleChange}
-                    className={`block w-full px-3 py-2 border text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                    className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
                       errors.cuda_version
                         ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
                         : "border-gray-300 text-gray-900"
@@ -388,13 +388,15 @@ const ServerApplicationPage = ({ user }) => {
                     ))}
                   </select>
                   {errors.cuda_version && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm text-red-600">
                       {errors.cuda_version}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    필요한 CUDA 버전을 선택하세요
-                  </p>
+                  {!errors.cuda_version && (
+                    <p className="text-sm text-gray-500">
+                      필요한 CUDA 버전을 선택하세요
+                    </p>
+                  )}
                 </div>
               </div>
 
