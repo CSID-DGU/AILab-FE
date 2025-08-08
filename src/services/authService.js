@@ -15,11 +15,11 @@ export const authService = {
     }
   },
 
-  // 이메일 인증번호 검증 (추후 구현 예정)
+  // 이메일 인증번호 검증
   verifyEmailCode: async (email, code) => {
     try {
-      // TODO: 실제 API 엔드포인트로 교체 필요
-      const response = await apiClient.post("/api/auth/email/verify", {
+      // POST 요청으로 이메일과 코드를 쿼리 파라미터로 전송 (curl과 동일)
+      const response = await apiClient.postWithQuery("/api/auth/email/verify", {
         email,
         code,
       });
