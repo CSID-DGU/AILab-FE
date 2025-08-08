@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import Alert from "../../components/UI/Alert";
+import { authService } from "../../services/authService";
 
 const SignupPage = () => {
   const [step, setStep] = useState(1); // 1: 이메일 인증, 2: 회원가입 폼
@@ -104,18 +105,25 @@ const SignupPage = () => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock API call
+      const response = await authService.sendEmailVerification(formData.email);
 
-      setEmailVerified(true);
-      setAlert({
-        type: "success",
-        message: "인증번호가 이메일로 전송되었습니다. 이메일을 확인해주세요.",
-      });
-    } catch {
+      // API 응답이 성공적일 때
+      if (response.status === 1073741824) {
+        setEmailVerified(true);
+        setAlert({
+          type: "success",
+          message:
+            response.message ||
+            "인증번호가 이메일로 전송되었습니다. 이메일을 확인해주세요.",
+        });
+      } else {
+        throw new Error(response.message || "인증번호 전송에 실패했습니다.");
+      }
+    } catch (error) {
       setAlert({
         type: "error",
-        message: "인증번호 전송에 실패했습니다. 다시 시도해주세요.",
+        message:
+          error.message || "인증번호 전송에 실패했습니다. 다시 시도해주세요.",
       });
     } finally {
       setIsLoading(false);
