@@ -107,8 +107,9 @@ const SignupPage = () => {
     try {
       const response = await authService.sendEmailVerification(formData.email);
 
-      // API 응답이 성공적일 때
-      if (response.status === 1073741824) {
+      // API 응답이 성공적일 때 (HTTP 200이면 성공으로 처리)
+      // 만약 특정 status 필드가 있다면: response.status === 200 또는 response.success === true
+      if (response.status === 200) {
         setEmailVerified(true);
         setAlert({
           type: "success",
