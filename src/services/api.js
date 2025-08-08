@@ -14,7 +14,7 @@ class ApiClient {
     const config = {
       headers: {
         // body가 빈 문자열이 아닐 때만 Content-Type 설정
-        ...(options.body !== '' && { "Content-Type": "application/json" }),
+        ...(options.body !== "" && { "Content-Type": "application/json" }),
         ...options.headers,
       },
       ...options,
@@ -69,10 +69,10 @@ class ApiClient {
     return this.request(url.pathname + url.search, {
       method: "POST",
       headers: {
-        'accept': 'application/json;charset=UTF-8',
+        accept: "application/json;charset=UTF-8",
         // Content-Type은 빈 body일 때 제거
       },
-      body: '', // 빈 body (curl -d '' 와 동일)
+      body: "", // 빈 body (curl -d '' 와 동일)
     });
   }
 

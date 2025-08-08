@@ -6,10 +6,12 @@ export const authService = {
   sendEmailVerification: async (email) => {
     try {
       // POST 요청으로 이메일을 쿼리 파라미터로 전송 (curl과 동일)
-      const response = await apiClient.postWithQuery('/api/auth/email/send', { email });
+      const response = await apiClient.postWithQuery("/api/auth/email/send", {
+        email,
+      });
       return response;
     } catch (error) {
-      throw new Error(error.message || '인증번호 전송에 실패했습니다.');
+      throw new Error(error.message || "인증번호 전송에 실패했습니다.");
     }
   },
 
