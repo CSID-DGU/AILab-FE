@@ -163,11 +163,9 @@ const SignupPage = () => {
           message: "이메일 인증이 완료되었습니다.",
         });
 
-        // 성공 시 잠시 후 다음 단계로 이동
-        setTimeout(() => {
-          setStep(2);
-          setAlert(null); // 다음 단계로 이동할 때 알림 제거
-        }, 1500);
+        // 성공 시 즉시 다음 단계로 이동
+        setStep(2);
+        setAlert(null); // 다음 단계로 이동할 때 알림 제거
       } else {
         throw new Error("인증번호가 일치하지 않습니다.");
       }
