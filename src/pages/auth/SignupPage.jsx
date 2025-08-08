@@ -325,7 +325,7 @@ const SignupPage = () => {
                       </Button>
                     )}
                     <Button
-                      type="submit"
+                      type={emailVerified ? "button" : "submit"}
                       variant="primary"
                       size="large"
                       className={emailVerified ? "flex-1" : "w-full"}
