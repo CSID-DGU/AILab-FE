@@ -318,6 +318,7 @@ const SignupPage = () => {
                         size="large"
                         className="flex-1"
                         onClick={handleSendVerification}
+                        loading={isLoading}
                         disabled={isLoading}
                       >
                         재전송
