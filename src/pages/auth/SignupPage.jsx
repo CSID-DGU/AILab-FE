@@ -116,6 +116,16 @@ const SignupPage = () => {
             response.message ||
             "인증번호가 이메일로 전송되었습니다. 이메일을 확인해주세요.",
         });
+
+        // 성공 시 인증번호 입력 창으로 포커스 이동을 위해 잠시 후 스크롤
+        setTimeout(() => {
+          const verificationCodeInput = document.querySelector(
+            'input[name="verificationCode"]'
+          );
+          if (verificationCodeInput) {
+            verificationCodeInput.focus();
+          }
+        }, 100);
       } else {
         throw new Error(response.message || "인증번호 전송에 실패했습니다.");
       }
@@ -145,11 +155,16 @@ const SignupPage = () => {
       // TODO: API 호출로 대체
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock API call
 
-      setStep(2);
       setAlert({
         type: "success",
         message: "이메일 인증이 완료되었습니다.",
       });
+
+      // 성공 시 잠시 후 다음 단계로 이동
+      setTimeout(() => {
+        setStep(2);
+        setAlert(null); // 다음 단계로 이동할 때 알림 제거
+      }, 1500);
     } catch {
       setAlert({
         type: "error",
