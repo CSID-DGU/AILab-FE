@@ -14,59 +14,105 @@ import {
   UsersIcon,
   ComputerDesktopIcon,
   ClockIcon,
+  PencilSquareIcon,
+  CheckCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 const ServerApplicationPage = ({ user }) => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("new"); // "new" 또는 "change"
   const [formData, setFormData] = useState({
     ubuntu_username: "",
-    node_id: "",
+    rsgroup_id: "",
+    image_id: "",
     expires_at: "",
     volume_size_gb: "",
-    cuda_version: "",
     usage_purpose: "",
-    ubuntu_gid: "",
-    additional_info: "",
+    ubuntu_gids: [], // 배열로 변경
+  });
+  const [changeFormData, setChangeFormData] = useState({
+    request_id: "",
+    change_type: "",
+    new_value: "",
+    reason: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState(null);
-  const [availableNodes, setAvailableNodes] = useState([]);
+  const [resourceGroups, setResourceGroups] = useState([]);
+  const [containerImages, setContainerImages] = useState([]);
   const [availableGroups, setAvailableGroups] = useState([]);
-  const [cudaVersions] = useState(["11.7", "11.8", "12.0", "12.1", "12.2"]);
+  const [userRequests, setUserRequests] = useState([]); // 사용자의 승인된 요청들
 
   useEffect(() => {
     // Mock data - replace with actual API calls
     const fetchInitialData = async () => {
-      // Mock available nodes
-      setAvailableNodes([
+      // Mock resource groups with GPU models
+      setResourceGroups([
         {
-          node_id: "LAB1",
-          description: "GPU Lab 1 - RTX 4090 x2, 64GB RAM",
-          memory_size_GB: 64,
-          CPU_core_count: 16,
+          rsgroup_id: 1,
+          description: "RTX A3000 GPU 그룹",
+          gpu_model: "RTX A3000",
+          ram_gb: 12,
+          nodes_count: 4,
           available: true,
         },
         {
-          node_id: "LAB2",
-          description: "GPU Lab 2 - RTX 4080 x4, 128GB RAM",
-          memory_size_GB: 128,
-          CPU_core_count: 32,
+          rsgroup_id: 2,
+          description: "RTX 3090 GPU 그룹",
+          gpu_model: "RTX 3090",
+          ram_gb: 24,
+          nodes_count: 2,
           available: true,
         },
         {
-          node_id: "FARM1",
-          description: "Server Farm 1 - A100 x8, 256GB RAM",
-          memory_size_GB: 256,
-          CPU_core_count: 64,
+          rsgroup_id: 3,
+          description: "Ada A3000 GPU 그룹",
+          gpu_model: "Ada A3000",
+          ram_gb: 24,
+          nodes_count: 2,
+          available: true,
+        },
+        {
+          rsgroup_id: 4,
+          description: "RTX 4090 GPU 그룹",
+          gpu_model: "RTX 4090",
+          ram_gb: 24,
+          nodes_count: 1,
           available: false,
         },
+      ]);
+
+      // Mock container images with CUDA versions
+      setContainerImages([
         {
-          node_id: "FARM2",
-          description: "Server Farm 2 - A100 x4, 128GB RAM",
-          memory_size_GB: 128,
-          CPU_core_count: 32,
-          available: true,
+          image_id: 1,
+          image_name: "pytorch",
+          image_version: "2.0-cuda11.8",
+          cuda_version: "11.8",
+          description: "PyTorch 2.0 with CUDA 11.8",
+        },
+        {
+          image_id: 2,
+          image_name: "tensorflow",
+          image_version: "2.13-cuda11.8",
+          cuda_version: "11.8",
+          description: "TensorFlow 2.13 with CUDA 11.8",
+        },
+        {
+          image_id: 3,
+          image_name: "pytorch",
+          image_version: "2.1-cuda12.0",
+          cuda_version: "12.0",
+          description: "PyTorch 2.1 with CUDA 12.0",
+        },
+        {
+          image_id: 4,
+          image_name: "custom-ml",
+          image_version: "1.0-cuda12.1",
+          cuda_version: "12.1",
+          description: "Custom ML Environment with CUDA 12.1",
         },
       ]);
 
@@ -76,6 +122,36 @@ const ServerApplicationPage = ({ user }) => {
         { ubuntu_gid: 1002, group_name: "researchers" },
         { ubuntu_gid: 1003, group_name: "students" },
         { ubuntu_gid: 1004, group_name: "faculty" },
+      ]);
+
+      // Mock user's approved requests
+      setUserRequests([
+        {
+          request_id: 1,
+          rsgroup_id: 1,
+          image_id: 1,
+          volume_size_gb: 500,
+          expires_at: "2025-11-10",
+          ubuntu_gids: [1001, 1003], // 배열로 변경
+          status: "FULFILLED",
+          gpu_model: "RTX A3000",
+          image_name: "pytorch",
+          image_version: "2.0-cuda11.8",
+          group_names: ["default", "students"], // 그룹 이름들
+        },
+        {
+          request_id: 2,
+          rsgroup_id: 2,
+          image_id: 2,
+          volume_size_gb: 1000,
+          expires_at: "2025-12-15",
+          ubuntu_gids: [1002], // 배열로 변경
+          status: "FULFILLED",
+          gpu_model: "RTX 3090",
+          image_name: "tensorflow",
+          image_version: "2.13-cuda11.8",
+          group_names: ["researchers"], // 그룹 이름들
+        },
       ]);
 
       // Set default expiry date (3 months from now)
@@ -105,6 +181,144 @@ const ServerApplicationPage = ({ user }) => {
     }
   };
 
+  const handleChangeFormChange = (e) => {
+    const { name, value } = e.target;
+
+    // change_type이 변경될 때 new_value 초기화
+    if (name === "change_type") {
+      const initialValue = value === "GROUPS" ? JSON.stringify([]) : "";
+      setChangeFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        new_value: initialValue,
+      }));
+    } else {
+      setChangeFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+    }
+  };
+
+  // 그룹 추가 핸들러
+  const addGroup = (gid) => {
+    if (activeTab === "new") {
+      if (!formData.ubuntu_gids.includes(gid)) {
+        setFormData((prev) => ({
+          ...prev,
+          ubuntu_gids: [...prev.ubuntu_gids, gid],
+        }));
+      }
+    } else {
+      // 변경 요청 탭에서는 new_value를 배열로 관리
+      const currentGroups = changeFormData.new_value
+        ? JSON.parse(changeFormData.new_value)
+        : [];
+      if (!currentGroups.includes(gid)) {
+        const newGroups = [...currentGroups, gid];
+        setChangeFormData((prev) => ({
+          ...prev,
+          new_value: JSON.stringify(newGroups),
+        }));
+      }
+    }
+  };
+
+  // 그룹 제거 핸들러
+  const removeGroup = (gid) => {
+    if (activeTab === "new") {
+      setFormData((prev) => ({
+        ...prev,
+        ubuntu_gids: prev.ubuntu_gids.filter((id) => id !== gid),
+      }));
+    } else {
+      // 변경 요청 탭에서는 new_value를 배열로 관리
+      const currentGroups = changeFormData.new_value
+        ? JSON.parse(changeFormData.new_value)
+        : [];
+      const newGroups = currentGroups.filter((id) => id !== gid);
+      setChangeFormData((prev) => ({
+        ...prev,
+        new_value: JSON.stringify(newGroups),
+      }));
+    }
+  };
+
+  // 그룹 선택 UI 컴포넌트
+  const GroupSelector = ({ selectedGroups }) => {
+    const getGroupName = (gid) => {
+      const group = availableGroups.find((g) => g.ubuntu_gid === gid);
+      return group ? group.group_name : `GID: ${gid}`;
+    };
+
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <UsersIcon className="w-4 h-4 inline mr-1" />
+          그룹 (선택사항)
+        </label>
+
+        {/* 선택된 그룹들 표시 */}
+        {selectedGroups.length > 0 && (
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-2">
+              {selectedGroups.map((gid) => (
+                <span
+                  key={gid}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#F68313] text-white"
+                >
+                  {getGroupName(gid)}
+                  <button
+                    type="button"
+                    onClick={() => removeGroup(gid)}
+                    className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-[#E6750F] focus:outline-none"
+                  >
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 그룹 선택 드롭다운 */}
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              addGroup(parseInt(e.target.value));
+              e.target.value = ""; // 선택 후 초기화
+            }
+          }}
+          className="block w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313]"
+        >
+          <option value="">그룹을 추가하려면 선택하세요</option>
+          {availableGroups
+            .filter((group) => !selectedGroups.includes(group.ubuntu_gid))
+            .map((group) => (
+              <option key={group.ubuntu_gid} value={group.ubuntu_gid}>
+                {group.group_name} (GID: {group.ubuntu_gid})
+              </option>
+            ))}
+        </select>
+
+        <p className="text-xs text-gray-500 mt-1">
+          {selectedGroups.length > 0
+            ? `${selectedGroups.length}개 그룹이 선택됨. 뱃지의 X 버튼을 클릭하여 제거할 수 있습니다.`
+            : "필요한 경우 하나 이상의 그룹을 선택할 수 있습니다."}
+        </p>
+      </div>
+    );
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -115,8 +329,12 @@ const ServerApplicationPage = ({ user }) => {
         "유효한 우분투 계정명을 입력해주세요. (소문자, 숫자, _, - 만 사용 가능)";
     }
 
-    if (!formData.node_id) {
-      newErrors.node_id = "사용할 노드를 선택해주세요.";
+    if (!formData.rsgroup_id) {
+      newErrors.rsgroup_id = "GPU 기종을 선택해주세요.";
+    }
+
+    if (!formData.image_id) {
+      newErrors.image_id = "컨테이너 이미지를 선택해주세요.";
     }
 
     if (!formData.expires_at) {
@@ -138,14 +356,49 @@ const ServerApplicationPage = ({ user }) => {
       }
     }
 
-    if (!formData.cuda_version) {
-      newErrors.cuda_version = "CUDA 버전을 선택해주세요.";
-    }
-
     if (!formData.usage_purpose.trim()) {
       newErrors.usage_purpose = "사용 목적을 입력해주세요.";
     } else if (formData.usage_purpose.length < 10) {
       newErrors.usage_purpose = "사용 목적을 10자 이상 입력해주세요.";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateChangeForm = () => {
+    const newErrors = {};
+
+    if (!changeFormData.request_id) {
+      newErrors.request_id = "변경할 서버를 선택해주세요.";
+    }
+
+    if (!changeFormData.change_type) {
+      newErrors.change_type = "변경 항목을 선택해주세요.";
+    }
+
+    if (!changeFormData.new_value) {
+      newErrors.new_value = "새로운 값을 입력해주세요.";
+    } else {
+      // 변경 타입별 유효성 검사
+      if (changeFormData.change_type === "VOLUME_SIZE") {
+        const size = parseInt(changeFormData.new_value);
+        if (isNaN(size) || size < 10 || size > 2000) {
+          newErrors.new_value = "볼륨 크기는 10GB ~ 2000GB 사이여야 합니다.";
+        }
+      } else if (changeFormData.change_type === "EXPIRES_AT") {
+        const expiryDate = new Date(changeFormData.new_value);
+        const today = new Date();
+        if (expiryDate <= today) {
+          newErrors.new_value = "만료일은 오늘 이후 날짜여야 합니다.";
+        }
+      }
+    }
+
+    if (!changeFormData.reason.trim()) {
+      newErrors.reason = "변경 사유를 입력해주세요.";
+    } else if (changeFormData.reason.length < 10) {
+      newErrors.reason = "변경 사유를 10자 이상 입력해주세요.";
     }
 
     setErrors(newErrors);
@@ -169,17 +422,15 @@ const ServerApplicationPage = ({ user }) => {
       // Create request data matching DDL structure
       const requestData = {
         user_id: user?.user_id,
-        node_id: formData.node_id,
+        rsgroup_id: parseInt(formData.rsgroup_id),
+        image_id: parseInt(formData.image_id),
         ubuntu_username: formData.ubuntu_username,
         expires_at: formData.expires_at,
         volume_size_byte:
           parseInt(formData.volume_size_gb) * 1024 * 1024 * 1024, // Convert GB to bytes
-        cuda_version: formData.cuda_version,
         usage_purpose: formData.usage_purpose,
-        ubuntu_gid: formData.ubuntu_gid || null,
-        form_answers: {
-          additional_info: formData.additional_info,
-        },
+        ubuntu_gids: formData.ubuntu_gids, // 배열로 변경
+        form_answers: {},
       };
 
       console.log("Request data:", requestData);
@@ -204,7 +455,74 @@ const ServerApplicationPage = ({ user }) => {
     }
   };
 
-  const getNodeStatusBadge = (available) => {
+  const handleChangeSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateChangeForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setAlert(null);
+
+    try {
+      // TODO: API 호출로 대체
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Mock API call
+
+      // Get old value for comparison
+      const selectedRequest = userRequests.find(
+        (req) => req.request_id === parseInt(changeFormData.request_id)
+      );
+
+      let oldValue = "";
+      if (changeFormData.change_type === "VOLUME_SIZE") {
+        oldValue = selectedRequest.volume_size_gb;
+      } else if (changeFormData.change_type === "EXPIRES_AT") {
+        oldValue = selectedRequest.expires_at;
+      } else if (changeFormData.change_type === "RSGROUP_ID") {
+        oldValue = selectedRequest.rsgroup_id;
+      } else if (changeFormData.change_type === "IMAGE_ID") {
+        oldValue = selectedRequest.image_id;
+      } else if (changeFormData.change_type === "GROUPS") {
+        oldValue = JSON.stringify(selectedRequest.ubuntu_gids); // 배열을 JSON으로 변환
+      }
+
+      // Create change request data
+      const changeRequestData = {
+        request_id: parseInt(changeFormData.request_id),
+        change_type: changeFormData.change_type,
+        old_value: oldValue,
+        new_value: changeFormData.new_value,
+        reason: changeFormData.reason,
+        requested_by: user?.user_id,
+      };
+
+      console.log("Change request data:", changeRequestData);
+
+      setAlert({
+        type: "success",
+        message:
+          "변경 요청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
+      });
+
+      // Reset form
+      setChangeFormData({
+        request_id: "",
+        change_type: "",
+        new_value: "",
+        reason: "",
+      });
+    } catch {
+      setAlert({
+        type: "error",
+        message: "변경 요청에 실패했습니다. 다시 시도해주세요.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getResourceGroupStatusBadge = (available) => {
     return available ? (
       <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
         사용 가능
@@ -216,14 +534,158 @@ const ServerApplicationPage = ({ user }) => {
     );
   };
 
+  const getNewValueInput = () => {
+    const { change_type } = changeFormData;
+
+    switch (change_type) {
+      case "VOLUME_SIZE":
+        return (
+          <Input
+            label="새로운 볼륨 크기 (GB)"
+            name="new_value"
+            type="number"
+            value={changeFormData.new_value}
+            onChange={handleChangeFormChange}
+            error={errors.new_value}
+            placeholder="예: 1000"
+            help="10GB ~ 2000GB 사이"
+            min="10"
+            max="2000"
+            required
+            icon={CircleStackIcon}
+          />
+        );
+      case "EXPIRES_AT":
+        return (
+          <Input
+            label="새로운 만료일"
+            name="new_value"
+            type="date"
+            value={changeFormData.new_value}
+            onChange={handleChangeFormChange}
+            error={errors.new_value}
+            help="서버 사용 종료 예정일"
+            required
+            icon={CalendarIcon}
+          />
+        );
+      case "RSGROUP_ID":
+        return (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              <CpuChipIcon className="w-4 h-4 inline mr-1" />
+              새로운 GPU 기종 *
+            </label>
+            <select
+              name="new_value"
+              value={changeFormData.new_value}
+              onChange={handleChangeFormChange}
+              className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                errors.new_value
+                  ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 text-gray-900"
+              }`}
+              required
+            >
+              <option value="">GPU 기종을 선택하세요</option>
+              {resourceGroups.map((group) => (
+                <option key={group.rsgroup_id} value={group.rsgroup_id}>
+                  {group.gpu_model} ({group.ram_gb}GB, {group.nodes_count}개
+                  노드)
+                </option>
+              ))}
+            </select>
+            {errors.new_value && (
+              <p className="text-sm text-red-600">{errors.new_value}</p>
+            )}
+          </div>
+        );
+      case "IMAGE_ID":
+        return (
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              <ComputerDesktopIcon className="w-4 h-4 inline mr-1" />
+              새로운 컨테이너 이미지 *
+            </label>
+            <select
+              name="new_value"
+              value={changeFormData.new_value}
+              onChange={handleChangeFormChange}
+              className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                errors.new_value
+                  ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 text-gray-900"
+              }`}
+              required
+            >
+              <option value="">컨테이너 이미지를 선택하세요</option>
+              {containerImages.map((image) => (
+                <option key={image.image_id} value={image.image_id}>
+                  {image.image_name} {image.image_version} (CUDA{" "}
+                  {image.cuda_version})
+                </option>
+              ))}
+            </select>
+            {errors.new_value && (
+              <p className="text-sm text-red-600">{errors.new_value}</p>
+            )}
+          </div>
+        );
+      case "GROUPS": {
+        const currentGroups = changeFormData.new_value
+          ? JSON.parse(changeFormData.new_value)
+          : [];
+        return <GroupSelector selectedGroups={currentGroups} />;
+      }
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">서버 신청</h1>
+        <h1 className="text-2xl font-bold text-gray-900">서버 관리</h1>
         <p className="text-gray-600 mt-1">
-          AI 연구를 위한 GPU 서버를 신청하세요.
+          새로운 서버를 신청하거나 기존 서버 정보를 변경하세요.
         </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          <button
+            onClick={() => {
+              setActiveTab("new");
+              setAlert(null);
+              setErrors({});
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "new"
+                ? "border-[#F68313] text-[#F68313]"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <ServerIcon className="w-5 h-5 inline mr-2" />
+            서버 신청서
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("change");
+              setAlert(null);
+              setErrors({});
+            }}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === "change"
+                ? "border-[#F68313] text-[#F68313]"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <PencilSquareIcon className="w-5 h-5 inline mr-2" />
+            승인된 서버 정보 변경
+          </button>
+        </nav>
       </div>
 
       {/* Alert */}
@@ -231,300 +693,448 @@ const ServerApplicationPage = ({ user }) => {
         <Alert
           type={alert.type}
           onClose={() => setAlert(null)}
-          title={alert.type === "success" ? "신청 완료" : "신청 실패"}
+          title={
+            alert.type === "success"
+              ? activeTab === "new"
+                ? "신청 완료"
+                : "변경 요청 완료"
+              : activeTab === "new"
+              ? "신청 실패"
+              : "변경 요청 실패"
+          }
         >
           {alert.message}
         </Alert>
       )}
 
-      {/* Application Form */}
-      <Card
-        title="서버 신청서"
-        subtitle="모든 필수 항목을 정확히 입력해주세요."
-      >
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Information Section */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <UserIcon className="w-5 h-5 mr-2 text-[#F68313]" />
-              기본 정보
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="우분투 계정명"
-                name="ubuntu_username"
-                type="text"
-                value={formData.ubuntu_username}
-                onChange={handleChange}
-                error={errors.ubuntu_username}
-                placeholder="예: john_doe123"
-                help="소문자, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능"
-                required
-                icon={UserIcon}
-              />
-
-              <Input
-                label="사용 만료일"
-                name="expires_at"
-                type="date"
-                value={formData.expires_at}
-                onChange={handleChange}
-                error={errors.expires_at}
-                help="서버 사용 종료 예정일"
-                required
-                icon={CalendarIcon}
-              />
-            </div>
-          </div>
-
-          {/* Server Configuration Section */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
-              서버 설정
-            </h3>
-
-            <div className="space-y-6">
-              {/* Node Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <ComputerDesktopIcon className="w-4 h-4 inline mr-1" />
-                  사용할 노드 *
-                </label>
-                <div className="grid grid-cols-1 gap-3">
-                  {availableNodes.map((node) => (
-                    <div key={node.node_id} className="relative">
-                      <input
-                        type="radio"
-                        id={node.node_id}
-                        name="node_id"
-                        value={node.node_id}
-                        checked={formData.node_id === node.node_id}
-                        onChange={handleChange}
-                        disabled={!node.available}
-                        className="sr-only"
-                      />
-                      <label
-                        htmlFor={node.node_id}
-                        className={`block p-4 border cursor-pointer transition-all ${
-                          !node.available
-                            ? "bg-gray-50 border-gray-200 cursor-not-allowed"
-                            : formData.node_id === node.node_id
-                            ? "border-[#F68313] bg-orange-50"
-                            : "border-gray-300 hover:border-gray-400"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="flex items-center">
-                              <span className="font-medium text-gray-900">
-                                {node.node_id}
-                              </span>
-                              <div className="ml-2">
-                                {getNodeStatusBadge(node.available)}
-                              </div>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {node.description}
-                            </p>
-                            <div className="flex space-x-4 text-xs text-gray-500 mt-2">
-                              <span>CPU: {node.CPU_core_count} 코어</span>
-                              <span>메모리: {node.memory_size_GB}GB</span>
-                            </div>
-                          </div>
-                          {formData.node_id === node.node_id && (
-                            <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                {errors.node_id && (
-                  <p className="text-sm text-red-600 mt-1">{errors.node_id}</p>
-                )}
-              </div>
+      {/* Tab Content */}
+      {activeTab === "new" ? (
+        <Card
+          title="서버 신청서"
+          subtitle="모든 필수 항목을 정확히 입력해주세요."
+        >
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Basic Information Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <UserIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                기본 정보
+              </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
-                  label="볼륨 크기 (GB)"
-                  name="volume_size_gb"
-                  type="number"
-                  value={formData.volume_size_gb}
+                  label="우분투 계정명"
+                  name="ubuntu_username"
+                  type="text"
+                  value={formData.ubuntu_username}
                   onChange={handleChange}
-                  error={errors.volume_size_gb}
-                  placeholder="예: 500"
-                  help="10GB ~ 2000GB 사이"
-                  min="10"
-                  max="2000"
+                  error={errors.ubuntu_username}
+                  placeholder="예: john_doe123"
+                  help="소문자, 숫자, 언더스코어(_), 하이픈(-)만 사용 가능"
                   required
-                  icon={CircleStackIcon}
+                  icon={UserIcon}
                 />
 
-                <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                <Input
+                  label="사용 만료일"
+                  name="expires_at"
+                  type="date"
+                  value={formData.expires_at}
+                  onChange={handleChange}
+                  error={errors.expires_at}
+                  help="서버 사용 종료 예정일"
+                  required
+                  icon={CalendarIcon}
+                />
+              </div>
+            </div>
+            {/* Server Configuration Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                리소스 선택
+              </h3>
+
+              <div className="space-y-6">
+                {/* Resource Group Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     <CpuChipIcon className="w-4 h-4 inline mr-1" />
-                    CUDA 버전 *
+                    GPU 기종 선택 *
+                  </label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {resourceGroups.map((group) => (
+                      <div key={group.rsgroup_id} className="relative">
+                        <input
+                          type="radio"
+                          id={`rsgroup_${group.rsgroup_id}`}
+                          name="rsgroup_id"
+                          value={group.rsgroup_id}
+                          checked={
+                            formData.rsgroup_id === group.rsgroup_id.toString()
+                          }
+                          onChange={handleChange}
+                          disabled={!group.available}
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor={`rsgroup_${group.rsgroup_id}`}
+                          className={`block p-4 border cursor-pointer transition-all ${
+                            !group.available
+                              ? "bg-gray-50 border-gray-200 cursor-not-allowed"
+                              : formData.rsgroup_id ===
+                                group.rsgroup_id.toString()
+                              ? "border-[#F68313] bg-orange-50"
+                              : "border-gray-300 hover:border-gray-400"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900">
+                                  {group.gpu_model}
+                                </span>
+                                <div className="ml-2">
+                                  {getResourceGroupStatusBadge(group.available)}
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {group.description}
+                              </p>
+                              <div className="flex space-x-4 text-xs text-gray-500 mt-2">
+                                <span>GPU 메모리: {group.ram_gb}GB</span>
+                                <span>
+                                  사용 가능 노드: {group.nodes_count}개
+                                </span>
+                              </div>
+                            </div>
+                            {formData.rsgroup_id ===
+                              group.rsgroup_id.toString() && (
+                              <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
+                                <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {errors.rsgroup_id && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.rsgroup_id}
+                    </p>
+                  )}
+                </div>
+
+                {/* Container Image Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <ComputerDesktopIcon className="w-4 h-4 inline mr-1" />
+                    컨테이너 이미지 *
                   </label>
                   <select
-                    name="cuda_version"
-                    value={formData.cuda_version}
+                    name="image_id"
+                    value={formData.image_id}
                     onChange={handleChange}
                     className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
-                      errors.cuda_version
+                      errors.image_id
                         ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
                         : "border-gray-300 text-gray-900"
                     }`}
                     required
                   >
-                    <option value="">CUDA 버전을 선택하세요</option>
-                    {cudaVersions.map((version) => (
-                      <option key={version} value={version}>
-                        CUDA {version}
+                    <option value="">컨테이너 이미지를 선택하세요</option>
+                    {containerImages.map((image) => (
+                      <option key={image.image_id} value={image.image_id}>
+                        {image.image_name} {image.image_version} (CUDA{" "}
+                        {image.cuda_version})
                       </option>
                     ))}
                   </select>
-                  {errors.cuda_version && (
-                    <p className="text-sm text-red-600">
-                      {errors.cuda_version}
-                    </p>
+                  {errors.image_id && (
+                    <p className="text-sm text-red-600">{errors.image_id}</p>
                   )}
-                  {!errors.cuda_version && (
-                    <p className="text-sm text-gray-500">
-                      필요한 CUDA 버전을 선택하세요
+                  {!errors.image_id && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      연구에 필요한 프레임워크와 CUDA 버전을 고려하여 선택하세요
                     </p>
                   )}
                 </div>
-              </div>
 
-              {/* Optional Group Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <UsersIcon className="w-4 h-4 inline mr-1" />
-                  그룹 (선택사항)
-                </label>
-                <select
-                  name="ubuntu_gid"
-                  value={formData.ubuntu_gid}
-                  onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313]"
-                >
-                  <option value="">그룹을 선택하세요 (선택사항)</option>
-                  {availableGroups.map((group) => (
-                    <option key={group.ubuntu_gid} value={group.ubuntu_gid}>
-                      {group.group_name} (GID: {group.ubuntu_gid})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  특정 그룹에 속하고 싶은 경우 선택하세요
-                </p>
+                <div className="grid grid-cols-1 gap-6">
+                  <Input
+                    label="볼륨 크기 (GB)"
+                    name="volume_size_gb"
+                    type="number"
+                    value={formData.volume_size_gb}
+                    onChange={handleChange}
+                    error={errors.volume_size_gb}
+                    placeholder="예: 500"
+                    help="10GB ~ 2000GB 사이"
+                    min="10"
+                    max="2000"
+                    required
+                    icon={CircleStackIcon}
+                  />
+                </div>
+
+                {/* Optional Group Selection */}
+                <GroupSelector selectedGroups={formData.ubuntu_gids} />
+              </div>
+            </div>{" "}
+            {/* Usage Information Section */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <DocumentTextIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                사용 정보
+              </h3>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    사용 목적 *
+                  </label>
+                  <textarea
+                    name="usage_purpose"
+                    value={formData.usage_purpose}
+                    onChange={handleChange}
+                    rows={4}
+                    className={`block w-full px-3 py-2 border text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                      errors.usage_purpose
+                        ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 text-gray-900"
+                    }`}
+                    placeholder="서버를 어떤 목적으로 사용할지 자세히 설명해주세요. (최소 10자)"
+                    required
+                  />
+                  {errors.usage_purpose && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.usage_purpose}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    연구 내용, 사용할 프레임워크, 예상 작업량 등을 포함해주세요
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+            {/* Important Notes */}
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+              <div className="flex items-start">
+                <ClockIcon className="w-5 h-5 text-blue-400 mt-0.5 mr-2" />
+                <div className="text-sm text-blue-700">
+                  <h4 className="font-medium mb-2">신청 전 확인사항</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>신청 후 관리자 승인까지 1-3일이 소요될 수 있습니다.</li>
+                    <li>승인 후 서버 접속 정보가 이메일로 전송됩니다.</li>
+                    <li>
+                      선택한 GPU 기종과 컨테이너 이미지에 따라 리소스가
+                      할당됩니다.
+                    </li>
+                    <li>
+                      컨테이너 이미지의 CUDA 버전과 GPU 호환성을 확인해주세요.
+                    </li>
+                    <li>
+                      데이터 백업은 사용자 책임이며, 정기적으로 백업하시기
+                      바랍니다.
+                    </li>
+                    <li>
+                      서버 사용 규정을 준수해야 하며, 위반 시 사용이 제한될 수
+                      있습니다.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-300">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isLoading}
+                disabled={isLoading}
+                className="bg-[#F68313] hover:bg-[#E6750F] border-[#F68313] hover:border-[#E6750F]"
+              >
+                <ServerIcon className="w-4 h-4 mr-1" />
+                신청 제출
+              </Button>
+            </div>
+          </form>
+        </Card>
+      ) : (
+        /* Change Request Form */
+        <Card
+          title="서버 정보 변경 요청"
+          subtitle="승인된 서버의 설정을 변경할 수 있습니다."
+        >
+          <form onSubmit={handleChangeSubmit} className="space-y-8">
+            {/* Request Selection */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <CheckCircleIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                변경할 서버 선택
+              </h3>
 
-          {/* Usage Information Section */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-              <DocumentTextIcon className="w-5 h-5 mr-2 text-[#F68313]" />
-              사용 정보
-            </h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  사용 목적 *
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  승인된 서버 *
                 </label>
-                <textarea
-                  name="usage_purpose"
-                  value={formData.usage_purpose}
-                  onChange={handleChange}
-                  rows={4}
-                  className={`block w-full px-3 py-2 border text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
-                    errors.usage_purpose
+                <select
+                  name="request_id"
+                  value={changeFormData.request_id}
+                  onChange={handleChangeFormChange}
+                  className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                    errors.request_id
                       ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
                       : "border-gray-300 text-gray-900"
                   }`}
-                  placeholder="서버를 어떤 목적으로 사용할지 자세히 설명해주세요. (최소 10자)"
                   required
-                />
-                {errors.usage_purpose && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {errors.usage_purpose}
+                >
+                  <option value="">변경할 서버를 선택하세요</option>
+                  {userRequests.map((request) => (
+                    <option key={request.request_id} value={request.request_id}>
+                      {request.gpu_model} - {request.image_name}{" "}
+                      {request.image_version} ({request.volume_size_gb}GB, 만료:{" "}
+                      {request.expires_at}, 그룹:{" "}
+                      {request.group_names.join(", ") || "없음"})
+                    </option>
+                  ))}
+                </select>
+                {errors.request_id && (
+                  <p className="text-sm text-red-600">{errors.request_id}</p>
+                )}
+                {!errors.request_id && (
+                  <p className="text-sm text-gray-500">
+                    변경하고자 하는 승인된 서버를 선택하세요
                   </p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  연구 내용, 사용할 프레임워크, 예상 작업량 등을 포함해주세요
-                </p>
               </div>
+            </div>
+
+            {/* Change Type Selection */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <PencilSquareIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                변경 항목
+              </h3>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    변경할 항목 *
+                  </label>
+                  <select
+                    name="change_type"
+                    value={changeFormData.change_type}
+                    onChange={handleChangeFormChange}
+                    className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                      errors.change_type
+                        ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
+                        : "border-gray-300 text-gray-900"
+                    }`}
+                    required
+                  >
+                    <option value="">변경할 항목을 선택하세요</option>
+                    <option value="VOLUME_SIZE">볼륨 크기</option>
+                    <option value="EXPIRES_AT">사용 만료일</option>
+                    <option value="RSGROUP_ID">GPU 기종</option>
+                    <option value="IMAGE_ID">컨테이너 이미지</option>
+                    <option value="GROUPS">그룹</option>
+                  </select>
+                  {errors.change_type && (
+                    <p className="text-sm text-red-600">{errors.change_type}</p>
+                  )}
+                </div>
+
+                {/* Dynamic input based on change type */}
+                {changeFormData.change_type && <div>{getNewValueInput()}</div>}
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <DocumentTextIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                변경 사유
+              </h3>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  추가 정보 (선택사항)
+                  변경 사유 *
                 </label>
                 <textarea
-                  name="additional_info"
-                  value={formData.additional_info}
-                  onChange={handleChange}
-                  rows={3}
-                  className="block w-full px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313]"
-                  placeholder="추가로 전달하고 싶은 정보가 있다면 입력해주세요"
+                  name="reason"
+                  value={changeFormData.reason}
+                  onChange={handleChangeFormChange}
+                  rows={4}
+                  className={`block w-full px-3 py-2 border text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
+                    errors.reason
+                      ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 text-gray-900"
+                  }`}
+                  placeholder="변경이 필요한 이유를 자세히 설명해주세요. (최소 10자)"
+                  required
                 />
+                {errors.reason && (
+                  <p className="text-sm text-red-600 mt-1">{errors.reason}</p>
+                )}
                 <p className="text-xs text-gray-500 mt-1">
-                  특별한 요구사항이나 참고사항이 있다면 입력해주세요
+                  연구 진행 상황 변화, 리소스 부족, 기타 사유 등을 포함해주세요
                 </p>
               </div>
             </div>
-          </div>
 
-          {/* Important Notes */}
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-            <div className="flex items-start">
-              <ClockIcon className="w-5 h-5 text-blue-400 mt-0.5 mr-2" />
-              <div className="text-sm text-blue-700">
-                <h4 className="font-medium mb-2">신청 전 확인사항</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>신청 후 관리자 승인까지 1-3일이 소요될 수 있습니다.</li>
-                  <li>승인 후 서버 접속 정보가 이메일로 전송됩니다.</li>
-                  <li>컨테이너 이미지는 승인 시 관리자가 지정합니다.</li>
-                  <li>
-                    데이터 백업은 사용자 책임이며, 정기적으로 백업하시기
-                    바랍니다.
-                  </li>
-                  <li>
-                    서버 사용 규정을 준수해야 하며, 위반 시 사용이 제한될 수
-                    있습니다.
-                  </li>
-                </ul>
+            {/* Important Notes for Change Request */}
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div className="flex items-start">
+                <ClockIcon className="w-5 h-5 text-yellow-400 mt-0.5 mr-2" />
+                <div className="text-sm text-yellow-700">
+                  <h4 className="font-medium mb-2">변경 요청 주의사항</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>
+                      변경 요청 후 관리자 승인까지 1-3일이 소요될 수 있습니다.
+                    </li>
+                    <li>승인 전까지는 기존 설정으로 서버가 운영됩니다.</li>
+                    <li>일부 변경사항은 서버 재시작이 필요할 수 있습니다.</li>
+                    <li>변경 요청이 거절될 경우 사유가 안내됩니다.</li>
+                    <li>
+                      중요한 데이터는 변경 전에 반드시 백업하시기 바랍니다.
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-300">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
-            >
-              취소
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              loading={isLoading}
-              disabled={isLoading}
-              className="bg-[#F68313] hover:bg-[#E6750F] border-[#F68313] hover:border-[#E6750F]"
-            >
-              <ServerIcon className="w-4 h-4 mr-1" />
-              신청 제출
-            </Button>
-          </div>
-        </form>
-      </Card>
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-300">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+              >
+                취소
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={isLoading}
+                disabled={isLoading}
+                className="bg-[#F68313] hover:bg-[#E6750F] border-[#F68313] hover:border-[#E6750F]"
+              >
+                <PencilSquareIcon className="w-4 h-4 mr-1" />
+                변경 요청 제출
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 // API 기본 설정
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL || "http://210.94.179.19:9796";
 
 // API 클라이언트 클래스
 class ApiClient {
@@ -22,15 +22,41 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
 
-      if (!response.ok) {
+      // 응답이 성공적이라면 status와 함께 반환
+      if (response.ok) {
+        // 응답 본문이 있는지 확인
+        const contentType = response.headers.get("content-type");
+        let data = null;
+
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            data = await response.json();
+          } catch {
+            // JSON 파싱 실패 시 null로 처리
+            data = null;
+          }
+        }
+
+        return {
+          status: response.status,
+          data,
+          headers: response.headers,
+        };
+      } else {
+        // 에러 응답인 경우 JSON 데이터를 파싱하여 에러 정보 추출
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch {
+          // JSON 파싱 실패 시 기본 에러 메시지
+          errorData = { message: `HTTP error! status: ${response.status}` };
+        }
+
         throw new Error(
-          data.message || `HTTP error! status: ${response.status}`
+          errorData.message || `HTTP error! status: ${response.status}`
         );
       }
-
-      return data;
     } catch (error) {
       console.error("API Request Error:", error);
       throw error;

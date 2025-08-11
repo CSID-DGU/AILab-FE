@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import Alert from "../../components/UI/Alert";
+import { authService } from "../../services/authService";
 
 const LoginPage = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -56,24 +57,44 @@ const LoginPage = ({ onLogin }) => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock API call
+      const response = await authService.login(
+        formData.email,
+        formData.password
+      );
 
-      // Mock successful login
-      const mockUser = {
-        id: 1,
-        name: "홍길동",
-        email: formData.email,
-        role: formData.email.includes("admin") ? "ADMIN" : "USER",
-        department: "컴퓨터공학과",
-        studentId: "2021123456",
-      };
+      // HTTP 상태 코드로 성공/실패 구분
+      if (response.status === 200 && response.data) {
+        // 성공 응답에서 토큰 정보 추출
+        const { accessToken, refreshToken } = response.data;
 
-      onLogin(mockUser);
+        // 토큰을 로컬 스토리지에 저장
+        authService.setTokens(accessToken, refreshToken);
+
+        // Mock user data (실제로는 토큰을 디코딩하거나 추가 API 호출로 사용자 정보 가져옴)
+        const mockUser = {
+          id: 1,
+          name: "사용자",
+          email: formData.email,
+          role: formData.email.includes("admin") ? "ADMIN" : "USER",
+          department: "컴퓨터공학과",
+          studentId: "2021123456",
+        };
+
+        onLogin(mockUser);
+      } else {
+        // HTTP 200이 아닌 경우 구체적인 에러 메시지 표시
+        setAlert({
+          type: "error",
+          message:
+            "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
+        });
+      }
     } catch {
+      // 네트워크 에러나 기타 에러의 경우
       setAlert({
         type: "error",
-        message: "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.",
+        message:
+          "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
       });
     } finally {
       setIsLoading(false);

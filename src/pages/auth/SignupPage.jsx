@@ -108,7 +108,6 @@ const SignupPage = () => {
       const response = await authService.sendEmailVerification(formData.email);
 
       // API 응답이 성공적일 때 (HTTP 200이면 성공으로 처리)
-      // 만약 특정 status 필드가 있다면: response.status === 200 또는 response.success === true
       if (response.status === 200) {
         setEmailVerified(true);
         setAlert({
@@ -126,7 +125,7 @@ const SignupPage = () => {
           }
         }, 100);
       } else {
-        throw new Error(response.message || "인증번호 전송에 실패했습니다.");
+        throw new Error("인증번호 전송에 실패했습니다.");
       }
     } catch (error) {
       setAlert({
@@ -190,22 +189,33 @@ const SignupPage = () => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Mock API call
-
-      setAlert({
-        type: "success",
-        message: "회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.",
+      const response = await authService.register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        department: formData.department,
+        studentId: formData.studentId,
+        phone: formData.phone,
       });
 
-      // 2초 후 로그인 페이지로 이동
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
-    } catch {
+      // HTTP 상태 코드 200이면 성공
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message: "회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.",
+        });
+
+        // 2초 후 로그인 페이지로 이동
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
+      } else {
+        throw new Error("회원가입에 실패했습니다.");
+      }
+    } catch (error) {
       setAlert({
         type: "error",
-        message: "회원가입에 실패했습니다. 다시 시도해주세요.",
+        message: error.message || "회원가입에 실패했습니다. 다시 시도해주세요.",
       });
     } finally {
       setIsLoading(false);

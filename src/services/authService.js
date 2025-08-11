@@ -2,6 +2,25 @@ import apiClient from "./api.js";
 
 // 인증 관련 API 서비스
 export const authService = {
+  // 토큰 관리
+  setTokens: (accessToken, refreshToken) => {
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
+  },
+
+  getAccessToken: () => {
+    return localStorage.getItem("accessToken");
+  },
+
+  getRefreshToken: () => {
+    return localStorage.getItem("refreshToken");
+  },
+
+  clearTokens: () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  },
+
   // 이메일 인증번호 발송
   sendEmailVerification: async (email) => {
     try {
@@ -29,21 +48,26 @@ export const authService = {
     }
   },
 
-  // 회원가입 (추후 구현 예정)
-  signup: async (userData) => {
+  // 회원가입
+  register: async (userData) => {
     try {
-      // TODO: 실제 API 엔드포인트로 교체 필요
-      const response = await apiClient.post("/api/auth/signup", userData);
+      const response = await apiClient.post("/api/auth/register", {
+        email: userData.email,
+        password: userData.password,
+        name: userData.name,
+        department: userData.department,
+        studentId: userData.studentId,
+        phone: userData.phone,
+      });
       return response;
     } catch (error) {
       throw new Error(error.message || "회원가입에 실패했습니다.");
     }
   },
 
-  // 로그인 (추후 구현 예정)
+  // 로그인
   login: async (email, password) => {
     try {
-      // TODO: 실제 API 엔드포인트로 교체 필요
       const response = await apiClient.post("/api/auth/login", {
         email,
         password,
