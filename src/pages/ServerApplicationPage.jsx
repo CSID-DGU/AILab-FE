@@ -45,6 +45,7 @@ const ServerApplicationPage = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [alert, setAlert] = useState(null);
   const [resourceGroups, setResourceGroups] = useState([]);
+  const [gpuTypes, setGpuTypes] = useState([]); // GPU 타입 목록 (server_name별 분리)
   const [containerImages, setContainerImages] = useState([]);
   const [availableGroups, setAvailableGroups] = useState([]);
   const [userRequests, setUserRequests] = useState([]); // 사용자의 승인된 요청들
@@ -53,28 +54,87 @@ const ServerApplicationPage = () => {
     // API에서 실제 데이터를 가져오는 함수
     const fetchInitialData = async () => {
       try {
-        // 실제 API 호출 시도
-        // TODO: 실제 API가 구현되면 주석을 해제하고 mock 데이터를 제거하세요
-        /*
-        try {
-          const [resourceGroupsResponse, imagesResponse] = await Promise.all([
-            requestService.getResourceGroups(),
+        // 실제 API 호출
+        const [gpuTypesResponse, imagesResponse, groupsResponse] =
+          await Promise.all([
+            requestService.getGpuTypes(),
             requestService.getContainerImages(),
+            requestService.getGroups(),
           ]);
 
-          if (resourceGroupsResponse.status === 200) {
-            setResourceGroups(resourceGroupsResponse.data);
-          }
+        console.log("GPU Types Response:", gpuTypesResponse);
+        console.log("Images Response:", imagesResponse);
+        console.log("Groups Response:", groupsResponse);
 
-          if (imagesResponse.status === 200) {
-            setContainerImages(imagesResponse.data);
+        if (gpuTypesResponse.status === 200) {
+          // GPU Types 응답은 중첩된 구조: response.data.data
+          const gpuData = gpuTypesResponse.data?.data || gpuTypesResponse.data;
+          if (Array.isArray(gpuData)) {
+            // API 응답에 gpuModel 필드가 없으므로 description에서 추출
+            const processedGpuData = gpuData.map((gpu) => {
+              // description에서 GPU 모델명 추출 (예: "RTX2080TI D6 11GB" → "RTX2080TI D6")
+              let gpuModel = "Unknown GPU";
+              if (gpu.description) {
+                const parts = gpu.description.trim().split(" ");
+                if (parts.length >= 2) {
+                  gpuModel = parts.slice(0, 2).join(" "); // 첫 두 단어만 사용
+                }
+              }
+              return {
+                ...gpu,
+                gpuModel,
+              };
+            });
+            setGpuTypes(processedGpuData);
+          } else {
+            console.warn("GPU Types 데이터가 배열이 아닙니다:", gpuData);
+            setGpuTypes([]);
           }
-        } catch (apiError) {
-          console.warn("API 호출 실패, Mock 데이터 사용:", apiError);
+        } else {
+          console.warn("GPU Types API 응답 실패:", gpuTypesResponse.status);
+          setGpuTypes([]);
         }
-        */
 
-        // Mock resource groups with GPU models
+        if (imagesResponse.status === 200) {
+          // Container Images 응답도 중첩된 구조일 수 있음: response.data.data 또는 response.data
+          const imageData = imagesResponse.data?.data || imagesResponse.data;
+          if (Array.isArray(imageData)) {
+            setContainerImages(imageData);
+          } else {
+            console.warn(
+              "Container Images 데이터가 배열이 아닙니다:",
+              imageData
+            );
+            setContainerImages([]);
+          }
+        } else {
+          console.warn(
+            "Container Images API 응답 실패:",
+            imagesResponse.status
+          );
+          setContainerImages([]);
+        }
+
+        if (groupsResponse.status === 200) {
+          // Groups 응답도 중첩된 구조일 수 있음: response.data.data 또는 response.data
+          const groupData = groupsResponse.data?.data || groupsResponse.data;
+          if (Array.isArray(groupData)) {
+            // API 응답 구조에 맞게 변환: ubuntuGid -> ubuntu_gid, groupName -> group_name
+            const processedGroups = groupData.map((group) => ({
+              ubuntu_gid: group.ubuntuGid || group.ubuntu_gid,
+              group_name: group.groupName || group.group_name,
+            }));
+            setAvailableGroups(processedGroups);
+          } else {
+            console.warn("Groups 데이터가 배열이 아닙니다:", groupData);
+            setAvailableGroups([]);
+          }
+        } else {
+          console.warn("Groups API 응답 실패:", groupsResponse.status);
+          setAvailableGroups([]);
+        }
+
+        // Mock data for other components until APIs are available
         setResourceGroups([
           {
             rsgroup_id: 1,
@@ -92,65 +152,8 @@ const ServerApplicationPage = () => {
             nodes_count: 2,
             available: true,
           },
-          {
-            rsgroup_id: 3,
-            description: "Ada A3000 GPU 그룹",
-            gpu_model: "Ada A3000",
-            ram_gb: 24,
-            nodes_count: 2,
-            available: true,
-          },
-          {
-            rsgroup_id: 4,
-            description: "RTX 4090 GPU 그룹",
-            gpu_model: "RTX 4090",
-            ram_gb: 24,
-            nodes_count: 1,
-            available: false,
-          },
         ]);
 
-        // Mock container images with CUDA versions
-        setContainerImages([
-          {
-            image_id: 1,
-            image_name: "pytorch",
-            image_version: "2.0-cuda11.8",
-            cuda_version: "11.8",
-            description: "PyTorch 2.0 with CUDA 11.8",
-          },
-          {
-            image_id: 2,
-            image_name: "tensorflow",
-            image_version: "2.13-cuda11.8",
-            cuda_version: "11.8",
-            description: "TensorFlow 2.13 with CUDA 11.8",
-          },
-          {
-            image_id: 3,
-            image_name: "pytorch",
-            image_version: "2.1-cuda12.0",
-            cuda_version: "12.0",
-            description: "PyTorch 2.1 with CUDA 12.0",
-          },
-          {
-            image_id: 4,
-            image_name: "custom-ml",
-            image_version: "1.0-cuda12.1",
-            cuda_version: "12.1",
-            description: "Custom ML Environment with CUDA 12.1",
-          },
-        ]);
-
-        // Mock available groups
-        setAvailableGroups([
-          { ubuntu_gid: 1001, group_name: "default" },
-          { ubuntu_gid: 1002, group_name: "researchers" },
-          { ubuntu_gid: 1003, group_name: "students" },
-          { ubuntu_gid: 1004, group_name: "faculty" },
-        ]);
-
-        // Mock user's approved requests
         setUserRequests([
           {
             request_id: 1,
@@ -158,12 +161,12 @@ const ServerApplicationPage = () => {
             image_id: 1,
             volume_size_gb: 500,
             expires_at: "2025-11-10",
-            ubuntu_gids: [1001, 1003], // 배열로 변경
+            ubuntu_gids: [1001, 1003],
             status: "FULFILLED",
             gpu_model: "RTX A3000",
             image_name: "pytorch",
             image_version: "2.0-cuda11.8",
-            group_names: ["default", "students"], // 그룹 이름들
+            group_names: ["default", "students"],
           },
           {
             request_id: 2,
@@ -171,12 +174,12 @@ const ServerApplicationPage = () => {
             image_id: 2,
             volume_size_gb: 1000,
             expires_at: "2025-12-15",
-            ubuntu_gids: [1002], // 배열로 변경
+            ubuntu_gids: [1002],
             status: "FULFILLED",
             gpu_model: "RTX 3090",
             image_name: "tensorflow",
             image_version: "2.13-cuda11.8",
-            group_names: ["researchers"], // 그룹 이름들
+            group_names: ["researchers"],
           },
         ]);
 
@@ -579,18 +582,6 @@ const ServerApplicationPage = () => {
     }
   };
 
-  const getResourceGroupStatusBadge = (available) => {
-    return available ? (
-      <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
-        사용 가능
-      </span>
-    ) : (
-      <span className="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800">
-        사용 불가
-      </span>
-    );
-  };
-
   const getNewValueInput = () => {
     const { change_type } = changeFormData;
 
@@ -659,30 +650,111 @@ const ServerApplicationPage = () => {
         );
       case "IMAGE_ID":
         return (
-          <div className="space-y-1">
+          <div className="space-y-4">
             <label className="block text-sm font-medium text-gray-700">
               <ComputerDesktopIcon className="w-4 h-4 inline mr-1" />
               새로운 컨테이너 이미지 *
             </label>
-            <select
-              name="new_value"
-              value={changeFormData.new_value}
-              onChange={handleChangeFormChange}
-              className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
-                errors.new_value
-                  ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
-                  : "border-gray-300 text-gray-900"
-              }`}
-              required
-            >
-              <option value="">컨테이너 이미지를 선택하세요</option>
-              {containerImages.map((image) => (
-                <option key={image.image_id} value={image.image_id}>
-                  {image.image_name} {image.image_version} (CUDA{" "}
-                  {image.cuda_version})
-                </option>
-              ))}
-            </select>
+
+            {/* 컨테이너 이미지가 로드되지 않았을 때 */}
+            {!containerImages || containerImages.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F68313] mx-auto mb-2"></div>
+                컨테이너 이미지 정보를 불러오는 중...
+              </div>
+            ) : (
+              /* 컨테이너 이미지를 프레임워크별로 그룹화하여 표시 */
+              Object.entries(
+                containerImages.reduce((acc, image) => {
+                  // API 응답의 구조에 따라 필드명 조정
+                  const frameworkName =
+                    image.imageName || image.image_name || "Unknown";
+                  const imageId = image.imageId || image.image_id;
+                  const imageVersion =
+                    image.imageVersion || image.image_version;
+                  const cudaVersion = image.cudaVersion || image.cuda_version;
+                  const description = image.description;
+
+                  if (!acc[frameworkName]) {
+                    acc[frameworkName] = [];
+                  }
+                  acc[frameworkName].push({
+                    ...image,
+                    imageId,
+                    imageName: frameworkName,
+                    imageVersion,
+                    cudaVersion,
+                    description,
+                  });
+                  return acc;
+                }, {})
+              ).map(([frameworkName, frameworkImages]) => (
+                <div key={frameworkName} className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-800 mb-2 flex items-center">
+                    <ComputerDesktopIcon className="w-4 h-4 mr-2 text-[#F68313]" />
+                    {frameworkName.charAt(0).toUpperCase() +
+                      frameworkName.slice(1)}
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    {frameworkImages.map((image) => (
+                      <div
+                        key={`change-${frameworkName}-${image.imageId}`}
+                        className="relative"
+                      >
+                        <input
+                          type="radio"
+                          id={`change_image_${image.imageId}`}
+                          name="new_value"
+                          value={image.imageId}
+                          checked={
+                            changeFormData.new_value ===
+                            image.imageId.toString()
+                          }
+                          onChange={handleChangeFormChange}
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor={`change_image_${image.imageId}`}
+                          className={`block p-3 border cursor-pointer transition-all ${
+                            changeFormData.new_value ===
+                            image.imageId.toString()
+                              ? "border-[#F68313] bg-orange-50"
+                              : "border-gray-300 hover:border-gray-400"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center">
+                                <span className="font-medium text-gray-900 text-sm">
+                                  {image.imageName} {image.imageVersion}
+                                </span>
+                              </div>
+                              {image.description && (
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {image.description}
+                                </p>
+                              )}
+                              <div className="flex space-x-4 text-xs text-gray-500 mt-1">
+                                <span>CUDA: {image.cudaVersion}</span>
+                                <span>ID: {image.imageId}</span>
+                              </div>
+                            </div>
+                            {changeFormData.new_value ===
+                              image.imageId.toString() && (
+                              <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
+                                <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+
             {errors.new_value && (
               <p className="text-sm text-red-600">{errors.new_value}</p>
             )}
@@ -817,7 +889,7 @@ const ServerApplicationPage = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-6 mt-6">
                 <Input
                   label="사용 만료일"
                   name="expires_at"
@@ -833,7 +905,7 @@ const ServerApplicationPage = () => {
             </div>
             {/* Server Configuration Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 mt-20 flex items-center">
                 <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
                 리소스 선택
               </h3>
@@ -845,63 +917,125 @@ const ServerApplicationPage = () => {
                     <CpuChipIcon className="w-4 h-4 inline mr-1" />
                     GPU 기종 선택 *
                   </label>
-                  <div className="grid grid-cols-1 gap-3">
-                    {resourceGroups.map((group) => (
-                      <div key={group.rsgroup_id} className="relative">
-                        <input
-                          type="radio"
-                          id={`rsgroup_${group.rsgroup_id}`}
-                          name="rsgroup_id"
-                          value={group.rsgroup_id}
-                          checked={
-                            formData.rsgroup_id === group.rsgroup_id.toString()
-                          }
-                          onChange={handleChange}
-                          disabled={!group.available}
-                          className="sr-only"
-                        />
-                        <label
-                          htmlFor={`rsgroup_${group.rsgroup_id}`}
-                          className={`block p-4 border cursor-pointer transition-all ${
-                            !group.available
-                              ? "bg-gray-50 border-gray-200 cursor-not-allowed"
-                              : formData.rsgroup_id ===
-                                group.rsgroup_id.toString()
-                              ? "border-[#F68313] bg-orange-50"
-                              : "border-gray-300 hover:border-gray-400"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="flex items-center">
-                                <span className="font-medium text-gray-900">
-                                  {group.gpu_model}
-                                </span>
-                                <div className="ml-2">
-                                  {getResourceGroupStatusBadge(group.available)}
+
+                  {/* GPU 타입이 로드되지 않았을 때 */}
+                  {!gpuTypes || gpuTypes.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F68313] mx-auto mb-2"></div>
+                      GPU 리소스 정보를 불러오는 중...
+                    </div>
+                  ) : (
+                    /* GPU 타입을 서버별로 그룹화하여 표시 */
+                    Object.entries(
+                      gpuTypes.reduce((acc, gpu) => {
+                        if (!acc[gpu.serverName]) {
+                          acc[gpu.serverName] = [];
+                        }
+                        acc[gpu.serverName].push(gpu);
+                        return acc;
+                      }, {})
+                    ).map(([serverName, serverGpus]) => (
+                      <div key={serverName} className="mb-6">
+                        <h4 className="text-base font-medium text-gray-800 mb-3 flex items-center">
+                          <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                          {serverName} 서버
+                        </h4>
+
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* 각 GPU 모델별로 그룹화 */}
+                          {Object.entries(
+                            serverGpus.reduce((acc, gpu) => {
+                              const key = `${gpu.gpuModel}-${gpu.ramGb}GB`;
+                              if (!acc[key]) {
+                                acc[key] = {
+                                  ...gpu,
+                                  availableNodes: 0,
+                                  nodeIds: [],
+                                };
+                              }
+                              acc[key].availableNodes +=
+                                gpu.availableNodes || 0;
+                              acc[key].nodeIds.push(gpu.nodeId);
+                              return acc;
+                            }, {})
+                          ).map(([gpuKey, gpuGroup]) => (
+                            <div
+                              key={`${serverName}-${gpuKey}`}
+                              className="relative"
+                            >
+                              <input
+                                type="radio"
+                                id={`rsgroup_${gpuGroup.rsgroupId}`}
+                                name="rsgroup_id"
+                                value={gpuGroup.rsgroupId}
+                                checked={
+                                  formData.rsgroup_id ===
+                                  gpuGroup.rsgroupId.toString()
+                                }
+                                onChange={handleChange}
+                                disabled={gpuGroup.availableNodes === 0}
+                                className="sr-only"
+                              />
+                              <label
+                                htmlFor={`rsgroup_${gpuGroup.rsgroupId}`}
+                                className={`block p-4 border cursor-pointer transition-all ${
+                                  gpuGroup.availableNodes === 0
+                                    ? "bg-gray-50 border-gray-200 cursor-not-allowed"
+                                    : formData.rsgroup_id ===
+                                      gpuGroup.rsgroupId.toString()
+                                    ? "border-[#F68313] bg-orange-50"
+                                    : "border-gray-300 hover:border-gray-400"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center">
+                                      <span className="font-medium text-gray-900">
+                                        {gpuGroup.gpuModel}
+                                      </span>
+                                      <div className="ml-2">
+                                        {gpuGroup.availableNodes > 0 ? (
+                                          <span className="inline-flex px-2 py-1 text-xs font-medium bg-green-100 text-green-800">
+                                            사용 가능
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex px-2 py-1 text-xs font-medium bg-red-100 text-red-800">
+                                            사용 불가
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {gpuGroup.description}
+                                    </p>
+                                    <div className="flex space-x-4 text-xs text-gray-500 mt-2">
+                                      <span>
+                                        GPU 메모리: {gpuGroup.ramGb}GB
+                                      </span>
+                                      <span>
+                                        사용 가능 노드:{" "}
+                                        {gpuGroup.availableNodes}개
+                                      </span>
+                                      <span>
+                                        노드 ID: {gpuGroup.nodeIds.join(", ")}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {formData.rsgroup_id ===
+                                    gpuGroup.rsgroupId.toString() && (
+                                    <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {group.description}
-                              </p>
-                              <div className="flex space-x-4 text-xs text-gray-500 mt-2">
-                                <span>GPU 메모리: {group.ram_gb}GB</span>
-                                <span>
-                                  사용 가능 노드: {group.nodes_count}개
-                                </span>
-                              </div>
+                              </label>
                             </div>
-                            {formData.rsgroup_id ===
-                              group.rsgroup_id.toString() && (
-                              <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
-                                <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
-                              </div>
-                            )}
-                          </div>
-                        </label>
+                          ))}
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  )}
+
                   {errors.rsgroup_id && (
                     <p className="text-sm text-red-600 mt-1">
                       {errors.rsgroup_id}
@@ -911,31 +1045,113 @@ const ServerApplicationPage = () => {
 
                 {/* Container Image Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 mt-10">
                     <ComputerDesktopIcon className="w-4 h-4 inline mr-1" />
                     컨테이너 이미지 *
                   </label>
-                  <select
-                    name="image_id"
-                    value={formData.image_id}
-                    onChange={handleChange}
-                    className={`block w-full px-3 py-2 border text-sm h-[38px] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313] ${
-                      errors.image_id
-                        ? "border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500"
-                        : "border-gray-300 text-gray-900"
-                    }`}
-                    required
-                  >
-                    <option value="">컨테이너 이미지를 선택하세요</option>
-                    {containerImages.map((image) => (
-                      <option key={image.image_id} value={image.image_id}>
-                        {image.image_name} {image.image_version} (CUDA{" "}
-                        {image.cuda_version})
-                      </option>
-                    ))}
-                  </select>
+
+                  {/* 컨테이너 이미지가 로드되지 않았을 때 */}
+                  {!containerImages || containerImages.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F68313] mx-auto mb-2"></div>
+                      컨테이너 이미지 정보를 불러오는 중...
+                    </div>
+                  ) : (
+                    /* 컨테이너 이미지를 프레임워크별로 그룹화하여 표시 */
+                    Object.entries(
+                      containerImages.reduce((acc, image) => {
+                        // API 응답의 구조에 따라 필드명 조정
+                        const frameworkName =
+                          image.imageName || image.image_name || "Unknown";
+                        const imageId = image.imageId || image.image_id;
+                        const imageVersion =
+                          image.imageVersion || image.image_version;
+                        const cudaVersion =
+                          image.cudaVersion || image.cuda_version;
+                        const description = image.description;
+
+                        if (!acc[frameworkName]) {
+                          acc[frameworkName] = [];
+                        }
+                        acc[frameworkName].push({
+                          ...image,
+                          imageId,
+                          imageName: frameworkName,
+                          imageVersion,
+                          cudaVersion,
+                          description,
+                        });
+                        return acc;
+                      }, {})
+                    ).map(([frameworkName, frameworkImages]) => (
+                      <div key={frameworkName} className="mb-6">
+                        <h4 className="text-base font-medium text-gray-800 mb-3 flex items-center">
+                          <ComputerDesktopIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                          {frameworkName.charAt(0).toUpperCase() +
+                            frameworkName.slice(1)}
+                        </h4>
+
+                        <div className="grid grid-cols-1 gap-3">
+                          {frameworkImages.map((image) => (
+                            <div
+                              key={`${frameworkName}-${image.imageId}`}
+                              className="relative"
+                            >
+                              <input
+                                type="radio"
+                                id={`image_${image.imageId}`}
+                                name="image_id"
+                                value={image.imageId}
+                                checked={
+                                  formData.image_id === image.imageId.toString()
+                                }
+                                onChange={handleChange}
+                                className="sr-only"
+                              />
+                              <label
+                                htmlFor={`image_${image.imageId}`}
+                                className={`block p-4 border cursor-pointer transition-all ${
+                                  formData.image_id === image.imageId.toString()
+                                    ? "border-[#F68313] bg-orange-50"
+                                    : "border-gray-300 hover:border-gray-400"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center">
+                                      <span className="font-medium text-gray-900">
+                                        {image.imageName} {image.imageVersion}
+                                      </span>
+                                    </div>
+                                    {image.description && (
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        {image.description}
+                                      </p>
+                                    )}
+                                    <div className="flex space-x-4 text-xs text-gray-500 mt-2">
+                                      <span>CUDA: {image.cudaVersion}</span>
+                                      <span>이미지 ID: {image.imageId}</span>
+                                    </div>
+                                  </div>
+                                  {formData.image_id ===
+                                    image.imageId.toString() && (
+                                    <div className="w-4 h-4 border-2 border-[#F68313] rounded-full flex items-center justify-center">
+                                      <div className="w-2 h-2 bg-[#F68313] rounded-full"></div>
+                                    </div>
+                                  )}
+                                </div>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+
                   {errors.image_id && (
-                    <p className="text-sm text-red-600">{errors.image_id}</p>
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.image_id}
+                    </p>
                   )}
                   {!errors.image_id && (
                     <p className="text-xs text-gray-500 mt-1">
@@ -967,7 +1183,7 @@ const ServerApplicationPage = () => {
             </div>{" "}
             {/* Usage Information Section */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 mt-20 flex items-center">
                 <DocumentTextIcon className="w-5 h-5 mr-2 text-[#F68313]" />
                 사용 정보
               </h3>

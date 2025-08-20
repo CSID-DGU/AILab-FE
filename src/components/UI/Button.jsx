@@ -7,6 +7,7 @@ const Button = ({
   loading = false,
   onClick,
   type = "button",
+  icon: Icon,
   ...props
 }) => {
   const baseClasses =
@@ -62,6 +63,7 @@ const Button = ({
           ></path>
         </svg>
       )}
+      {Icon && !loading && <Icon className="w-4 h-4 mr-2" />}
       {children}
     </button>
   );

@@ -25,15 +25,16 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
   ];
 
   const adminMenuItems = [
-    { name: "대시보드", href: "/admin/dashboard", icon: HomeIcon },
-    { name: "신청 관리", href: "/admin/applications", icon: DocumentTextIcon },
+    {
+      name: "신청서 관리",
+      href: "/admin/request-management",
+      icon: DocumentTextIcon,
+    },
     { name: "사용자 관리", href: "/admin/users", icon: UsersIcon },
     { name: "리소스 모니터링", href: "/admin/monitoring", icon: ChartBarIcon },
     { name: "컨테이너 관리", href: "/admin/containers", icon: ServerIcon },
     { name: "시스템 설정", href: "/admin/settings", icon: CogIcon },
   ];
-
-  const menuItems = userRole === "ADMIN" ? adminMenuItems : userMenuItems;
 
   return (
     <aside
@@ -61,34 +62,140 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
 
       {/* Navigation */}
       <nav className="flex-1 mt-6 overflow-hidden">
-        <ul className="space-y-2 px-3">
-          {menuItems.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <li key={item.name}>
-                <Link
-                  to={item.href}
-                  className={`flex items-center px-3 py-2 transition-colors duration-200 overflow-hidden ${
-                    isActive(item.href)
-                      ? "bg-[#F68313] text-white"
-                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`}
-                >
-                  <IconComponent className="w-5 h-5 flex-shrink-0" />
-                  <div
-                    className={`ml-3 transition-all duration-300 ${
-                      isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+        {userRole === "USER" ? (
+          // 일반 사용자 메뉴
+          <ul className="space-y-2 px-3">
+            {userMenuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={`flex items-center px-3 py-2 transition-colors duration-200 overflow-hidden ${
+                      isActive(item.href)
+                        ? "bg-[#F68313] text-white"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
                     }`}
                   >
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      {item.name}
-                    </span>
+                    <IconComponent className="w-5 h-5 flex-shrink-0" />
+                    <div
+                      className={`ml-3 transition-all duration-300 ${
+                        isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                      }`}
+                    >
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+
+            {/* 구분선 */}
+            <li className={`my-4 ${isCollapsed ? "px-2" : "px-3"}`}>
+              <div className="border-t border-gray-600"></div>
+            </li>
+
+            {/* 관리자 전용 라벨 */}
+            <li className={`px-3 py-2 ${isCollapsed ? "hidden" : "block"}`}>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                관리자 전용
+              </span>
+            </li>
+
+            {/* 관리자 전용 메뉴 (비활성화) */}
+            {adminMenuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <li key={item.name}>
+                  <div className="flex items-center px-3 py-2 text-gray-600 cursor-not-allowed opacity-50 overflow-hidden">
+                    <IconComponent className="w-5 h-5 flex-shrink-0" />
+                    <div
+                      className={`ml-3 transition-all duration-300 ${
+                        isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                      }`}
+                    >
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    </div>
                   </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          // 관리자 메뉴
+          <ul className="space-y-2 px-3">
+            {userMenuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={`flex items-center px-3 py-2 transition-colors duration-200 overflow-hidden ${
+                      isActive(item.href)
+                        ? "bg-[#F68313] text-white"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5 flex-shrink-0" />
+                    <div
+                      className={`ml-3 transition-all duration-300 ${
+                        isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                      }`}
+                    >
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+
+            {/* 구분선 */}
+            <li className={`my-4 ${isCollapsed ? "px-2" : "px-3"}`}>
+              <div className="border-t border-gray-600"></div>
+            </li>
+
+            {/* 관리자 전용 라벨 */}
+            <li className={`px-3 py-2 ${isCollapsed ? "hidden" : "block"}`}>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                관리자 전용
+              </span>
+            </li>
+
+            {/* 관리자 전용 메뉴 */}
+            {adminMenuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={`flex items-center px-3 py-2 transition-colors duration-200 overflow-hidden ${
+                      isActive(item.href)
+                        ? "bg-[#F68313] text-white"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5 flex-shrink-0" />
+                    <div
+                      className={`ml-3 transition-all duration-300 ${
+                        isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                      }`}
+                    >
+                      <span className="text-sm font-medium whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </nav>
 
       {/* User Role Badge */}

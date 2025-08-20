@@ -17,6 +17,9 @@ import SignupPage from "./pages/auth/SignupPage";
 import UserDashboard from "./pages/dashboard/UserDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 
+// Admin Pages
+import RequestManagementPage from "./pages/admin/RequestManagementPage";
+
 // Other Pages
 import AccountPage from "./pages/AccountPage";
 import ServerApplicationPage from "./pages/ServerApplicationPage";
@@ -111,6 +114,17 @@ const AppContent = () => {
           <ProtectedRoute requireAdmin>
             <DashboardLayout user={user} onLogout={logout}>
               <AdminDashboard />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/request-management"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout user={user} onLogout={logout}>
+              <RequestManagementPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

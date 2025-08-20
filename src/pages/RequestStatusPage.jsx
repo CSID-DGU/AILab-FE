@@ -4,128 +4,85 @@ import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
 import Badge from "../components/UI/Badge";
 import Alert from "../components/UI/Alert";
+import { useAuth } from "../hooks/useAuth";
+import { requestService } from "../services/requestService";
 import {
   DocumentTextIcon,
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
   ServerIcon,
-  CalendarIcon,
-  CpuChipIcon,
-  CircleStackIcon,
-  ComputerDesktopIcon,
-  UsersIcon,
   EyeIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
 
-const RequestStatusPage = ({ user }) => {
+const RequestStatusPage = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [filter, setFilter] = useState("ALL"); // ALL, PENDING, FULFILLED, DENIED
+  const [alert, setAlert] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Mock API call to fetch user's requests
     const fetchRequests = async () => {
       setLoading(true);
+      setAlert(null);
 
-      // Mock data - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        const response = await requestService.getUserRequests();
 
-      const mockRequests = [
-        {
-          request_id: 1,
-          user_id: user?.user_id,
-          node_id: "LAB1",
-          image_name: "ubuntu",
-          image_version: "20.04",
-          ubuntu_gid: 1002,
-          ubuntu_username: "user123",
-          expires_at: "2024-12-31T00:00:00Z",
-          volume_size_byte: 500000000000, // 500GB
-          cuda_version: "11.8",
-          usage_purpose: "딥러닝 모델 훈련을 위한 GPU 서버 사용",
-          form_answers: {
-            additional_info:
-              "PyTorch와 TensorFlow를 사용한 이미지 분류 모델 학습",
-          },
-          approved_at: "2024-01-20T10:30:00Z",
-          status: "FULFILLED",
-          comment: null,
-          created_at: "2024-01-15T14:20:00Z",
-          updated_at: "2024-01-20T10:30:00Z",
-          nodeInfo: {
-            memory_size_GB: 64,
-            CPU_core_count: 16,
-            gpus: [
-              { gpu_model: "RTX 4090", RAM_GB: 24 },
-              { gpu_model: "RTX 4090", RAM_GB: 24 },
-            ],
-          },
-          groupInfo: {
-            group_name: "researchers",
-          },
-          serverInfo: {
-            address: "ailab1.dgu.ac.kr",
-            port: "22001",
-            username: "user123",
-          },
-        },
-        {
-          request_id: 2,
-          user_id: user?.user_id,
-          node_id: "FARM2",
-          ubuntu_username: "user123_2",
-          expires_at: "2024-11-30T00:00:00Z",
-          volume_size_byte: 1000000000000, // 1TB
-          cuda_version: "12.0",
-          usage_purpose: "자연어처리 연구를 위한 대용량 데이터 처리",
-          form_answers: {
-            additional_info: "BERT, GPT 모델 파인튜닝 작업",
-          },
-          status: "PENDING",
-          comment: null,
-          created_at: "2024-08-01T09:15:00Z",
-          updated_at: "2024-08-01T09:15:00Z",
-          nodeInfo: {
-            memory_size_GB: 128,
-            CPU_core_count: 32,
-            gpus: [
-              { gpu_model: "A100", RAM_GB: 80 },
-              { gpu_model: "A100", RAM_GB: 80 },
-            ],
-          },
-        },
-        {
-          request_id: 3,
-          user_id: user?.user_id,
-          node_id: "LAB2",
-          ubuntu_username: "user123_old",
-          expires_at: "2024-06-30T00:00:00Z",
-          volume_size_byte: 250000000000, // 250GB
-          cuda_version: "11.7",
-          usage_purpose: "컴퓨터 비전 프로젝트",
-          form_answers: {
-            additional_info: "OpenCV, YOLO 모델 실험",
-          },
-          status: "DENIED",
-          comment: "리소스 부족으로 인한 거절. 다른 노드로 재신청 바랍니다.",
-          created_at: "2024-05-15T16:45:00Z",
-          updated_at: "2024-05-20T11:20:00Z",
-          nodeInfo: {
-            memory_size_GB: 32,
-            CPU_core_count: 8,
-            gpus: [{ gpu_model: "RTX 4080", RAM_GB: 16 }],
-          },
-        },
-      ];
+        if (response.status === 200) {
+          // API 응답 데이터를 기존 UI에 맞게 변환
+          const transformedRequests = response.data.map((request) => ({
+            request_id: request.requestId,
+            user_id: user?.user_id,
+            node_id: `RG-${request.resourceGroupId}`,
+            image_name: request.imageName,
+            image_version: request.imageVersion,
+            ubuntu_gid:
+              request.ubuntuGids?.length > 0
+                ? request.ubuntuGids.join(", ")
+                : null,
+            ubuntu_username: request.ubuntuUsername,
+            ubuntu_uid: request.ubuntuUid,
+            expires_at: request.expiresAt,
+            volume_size_byte: request.volumeSizeByte * 1024 * 1024 * 1024, // GB to bytes
+            usage_purpose: request.usagePurpose,
+            form_answers: request.formAnswers,
+            approved_at: request.approvedAt,
+            status: request.status,
+            comment: request.comment,
+            // API에서 제공되지 않는 created_at은 요청 ID로 대략적인 순서 유지
+            created_at: new Date(
+              Date.now() - (1000 - request.requestId) * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            updated_at: request.approvedAt || new Date().toISOString(),
+          }));
 
-      setRequests(mockRequests);
-      setLoading(false);
+          setRequests(transformedRequests);
+        } else {
+          setAlert({
+            type: "error",
+            message:
+              "요청 목록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch requests:", error);
+        setAlert({
+          type: "error",
+          message:
+            "요청 목록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchRequests();
+    if (user) {
+      fetchRequests();
+    }
   }, [user]);
 
   const getStatusBadge = (status) => {
@@ -159,13 +116,21 @@ const RequestStatusPage = ({ user }) => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!dateString) return "정보 없음";
+
+    try {
+      // ISO 8601 형식 처리
+      const date = new Date(dateString);
+      return date.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "날짜 형식 오류";
+    }
   };
 
   const getDaysUntilExpiry = (expiryDate) => {
@@ -211,6 +176,15 @@ const RequestStatusPage = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* Alert */}
+      {alert && (
+        <Alert
+          type={alert.type}
+          message={alert.message}
+          onClose={() => setAlert(null)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
@@ -301,7 +275,7 @@ const RequestStatusPage = ({ user }) => {
                     {getStatusBadge(request.status)}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                     <div>
                       <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
                         신청일
@@ -337,14 +311,15 @@ const RequestStatusPage = ({ user }) => {
                         {formatBytes(request.volume_size_byte)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                        CUDA 버전
-                      </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {request.cuda_version}
-                      </p>
-                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
+                      컨테이너 이미지
+                    </p>
+                    <p className="text-sm text-gray-900">
+                      {request.image_name}:{request.image_version}
+                    </p>
                   </div>
 
                   <div className="mb-4">
@@ -362,12 +337,8 @@ const RequestStatusPage = ({ user }) => {
                       <div className="text-sm text-green-700">
                         <p className="font-medium mb-1">승인 완료</p>
                         <p>승인일: {formatDate(request.approved_at)}</p>
-                        {request.serverInfo && (
-                          <p>
-                            접속 정보: {request.serverInfo.address}:
-                            {request.serverInfo.port}
-                          </p>
-                        )}
+                        <p>사용자명: {request.ubuntu_username}</p>
+                        <p>리소스 그룹: {request.node_id}</p>
                       </div>
                     </div>
                   )}
@@ -453,9 +424,32 @@ const RequestStatusPage = ({ user }) => {
                           {selectedRequest.ubuntu_username}
                         </p>
                       </div>
+                      {selectedRequest.ubuntu_gid && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Ubuntu GID
+                            {selectedRequest.ubuntu_gid.includes(",")
+                              ? "s"
+                              : ""}
+                          </p>
+                          <p className="text-sm text-gray-900">
+                            {selectedRequest.ubuntu_gid}
+                          </p>
+                        </div>
+                      )}
+                      {selectedRequest.ubuntu_uid && (
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            Ubuntu UID
+                          </p>
+                          <p className="text-sm text-gray-900">
+                            {selectedRequest.ubuntu_uid}
+                          </p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          노드
+                          리소스 그룹
                         </p>
                         <p className="text-sm text-gray-900">
                           {selectedRequest.node_id}
@@ -483,22 +477,13 @@ const RequestStatusPage = ({ user }) => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          CUDA 버전
+                          컨테이너 이미지
                         </p>
                         <p className="text-sm text-gray-900">
-                          {selectedRequest.cuda_version}
+                          {selectedRequest.image_name}:
+                          {selectedRequest.image_version}
                         </p>
                       </div>
-                      {selectedRequest.groupInfo && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            그룹
-                          </p>
-                          <p className="text-sm text-gray-900">
-                            {selectedRequest.groupInfo.group_name}
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
                   <div className="mt-4">
@@ -509,116 +494,66 @@ const RequestStatusPage = ({ user }) => {
                       {selectedRequest.usage_purpose}
                     </p>
                   </div>
-                  {selectedRequest.form_answers?.additional_info && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-700">
-                        추가 정보
-                      </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {selectedRequest.form_answers.additional_info}
-                      </p>
-                    </div>
-                  )}
+                  {selectedRequest.form_answers &&
+                    Object.keys(selectedRequest.form_answers).length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-700">
+                          추가 정보
+                        </p>
+                        <div className="text-sm text-gray-900 mt-1 space-y-1">
+                          {Object.entries(selectedRequest.form_answers).map(
+                            ([key, value]) => (
+                              <div key={key}>
+                                <span className="font-medium">{key}:</span>{" "}
+                                {value}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
                 </div>
 
-                {/* Hardware Information */}
-                {selectedRequest.nodeInfo && (
+                {/* Server Access Information (for approved requests) */}
+                {selectedRequest.status === "FULFILLED" && (
                   <div>
                     <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                      <ComputerDesktopIcon className="w-5 h-5 mr-2 text-[#F68313]" />
-                      하드웨어 정보
+                      <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                      서버 접속 정보
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-blue-50 p-3">
-                        <div className="flex items-center mb-1">
-                          <CpuChipIcon className="w-4 h-4 text-blue-600 mr-1" />
-                          <span className="text-sm font-medium text-blue-900">
-                            CPU
-                          </span>
+                    <div className="bg-gray-50 p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            사용자명
+                          </p>
+                          <code className="block mt-1 p-2 bg-white border text-sm">
+                            {selectedRequest.ubuntu_username}
+                          </code>
                         </div>
-                        <p className="text-sm text-blue-800">
-                          {selectedRequest.nodeInfo.CPU_core_count} 코어
-                        </p>
-                      </div>
-                      <div className="bg-green-50 p-3">
-                        <div className="flex items-center mb-1">
-                          <CircleStackIcon className="w-4 h-4 text-green-600 mr-1" />
-                          <span className="text-sm font-medium text-green-900">
-                            메모리
-                          </span>
-                        </div>
-                        <p className="text-sm text-green-800">
-                          {selectedRequest.nodeInfo.memory_size_GB} GB
-                        </p>
-                      </div>
-                      <div className="bg-purple-50 p-3">
-                        <div className="flex items-center mb-1">
-                          <CpuChipIcon className="w-4 h-4 text-purple-600 mr-1" />
-                          <span className="text-sm font-medium text-purple-900">
-                            GPU
-                          </span>
-                        </div>
-                        <div className="text-sm text-purple-800">
-                          {selectedRequest.nodeInfo.gpus?.map((gpu, idx) => (
-                            <div key={idx}>
-                              {gpu.gpu_model} ({gpu.RAM_GB}GB)
-                            </div>
-                          ))}
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">
+                            리소스 그룹 ID
+                          </p>
+                          <code className="block mt-1 p-2 bg-white border text-sm">
+                            {selectedRequest.node_id}
+                          </code>
                         </div>
                       </div>
+                      {selectedRequest.image_name && (
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700">
+                            컨테이너 이미지
+                          </p>
+                          <code className="block mt-1 p-2 bg-white border text-sm">
+                            {selectedRequest.image_name}:
+                            {selectedRequest.image_version}
+                          </code>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
-
-                {/* Server Access Information (for approved requests) */}
-                {selectedRequest.status === "FULFILLED" &&
-                  selectedRequest.serverInfo && (
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
-                        <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
-                        서버 접속 정보
-                      </h3>
-                      <div className="bg-gray-50 p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              서버 주소
-                            </p>
-                            <code className="block mt-1 p-2 bg-white border text-sm">
-                              {selectedRequest.serverInfo.address}
-                            </code>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              포트
-                            </p>
-                            <code className="block mt-1 p-2 bg-white border text-sm">
-                              {selectedRequest.serverInfo.port}
-                            </code>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-700">
-                              사용자명
-                            </p>
-                            <code className="block mt-1 p-2 bg-white border text-sm">
-                              {selectedRequest.serverInfo.username}
-                            </code>
-                          </div>
-                        </div>
-                        {selectedRequest.image_name && (
-                          <div className="mt-4">
-                            <p className="text-sm font-medium text-gray-700">
-                              컨테이너 이미지
-                            </p>
-                            <code className="block mt-1 p-2 bg-white border text-sm">
-                              {selectedRequest.image_name}:
-                              {selectedRequest.image_version}
-                            </code>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                 {/* Status History */}
                 <div>
