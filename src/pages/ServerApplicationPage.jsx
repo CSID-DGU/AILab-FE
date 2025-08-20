@@ -4,6 +4,7 @@ import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
 import Input from "../components/UI/Input";
 import Alert from "../components/UI/Alert";
+import { requestService } from "../services/requestService";
 import {
   ServerIcon,
   UserIcon,
@@ -17,13 +18,15 @@ import {
   PencilSquareIcon,
   CheckCircleIcon,
   XMarkIcon,
+  KeyIcon,
 } from "@heroicons/react/24/outline";
 
-const ServerApplicationPage = ({ user }) => {
+const ServerApplicationPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("new"); // "new" 또는 "change"
   const [formData, setFormData] = useState({
     ubuntu_username: "",
+    ubuntu_password: "",
     rsgroup_id: "",
     image_id: "",
     expires_at: "",
@@ -39,6 +42,7 @@ const ServerApplicationPage = ({ user }) => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [alert, setAlert] = useState(null);
   const [resourceGroups, setResourceGroups] = useState([]);
   const [containerImages, setContainerImages] = useState([]);
@@ -46,121 +50,152 @@ const ServerApplicationPage = ({ user }) => {
   const [userRequests, setUserRequests] = useState([]); // 사용자의 승인된 요청들
 
   useEffect(() => {
-    // Mock data - replace with actual API calls
+    // API에서 실제 데이터를 가져오는 함수
     const fetchInitialData = async () => {
-      // Mock resource groups with GPU models
-      setResourceGroups([
-        {
-          rsgroup_id: 1,
-          description: "RTX A3000 GPU 그룹",
-          gpu_model: "RTX A3000",
-          ram_gb: 12,
-          nodes_count: 4,
-          available: true,
-        },
-        {
-          rsgroup_id: 2,
-          description: "RTX 3090 GPU 그룹",
-          gpu_model: "RTX 3090",
-          ram_gb: 24,
-          nodes_count: 2,
-          available: true,
-        },
-        {
-          rsgroup_id: 3,
-          description: "Ada A3000 GPU 그룹",
-          gpu_model: "Ada A3000",
-          ram_gb: 24,
-          nodes_count: 2,
-          available: true,
-        },
-        {
-          rsgroup_id: 4,
-          description: "RTX 4090 GPU 그룹",
-          gpu_model: "RTX 4090",
-          ram_gb: 24,
-          nodes_count: 1,
-          available: false,
-        },
-      ]);
+      try {
+        // 실제 API 호출 시도
+        // TODO: 실제 API가 구현되면 주석을 해제하고 mock 데이터를 제거하세요
+        /*
+        try {
+          const [resourceGroupsResponse, imagesResponse] = await Promise.all([
+            requestService.getResourceGroups(),
+            requestService.getContainerImages(),
+          ]);
 
-      // Mock container images with CUDA versions
-      setContainerImages([
-        {
-          image_id: 1,
-          image_name: "pytorch",
-          image_version: "2.0-cuda11.8",
-          cuda_version: "11.8",
-          description: "PyTorch 2.0 with CUDA 11.8",
-        },
-        {
-          image_id: 2,
-          image_name: "tensorflow",
-          image_version: "2.13-cuda11.8",
-          cuda_version: "11.8",
-          description: "TensorFlow 2.13 with CUDA 11.8",
-        },
-        {
-          image_id: 3,
-          image_name: "pytorch",
-          image_version: "2.1-cuda12.0",
-          cuda_version: "12.0",
-          description: "PyTorch 2.1 with CUDA 12.0",
-        },
-        {
-          image_id: 4,
-          image_name: "custom-ml",
-          image_version: "1.0-cuda12.1",
-          cuda_version: "12.1",
-          description: "Custom ML Environment with CUDA 12.1",
-        },
-      ]);
+          if (resourceGroupsResponse.status === 200) {
+            setResourceGroups(resourceGroupsResponse.data);
+          }
 
-      // Mock available groups
-      setAvailableGroups([
-        { ubuntu_gid: 1001, group_name: "default" },
-        { ubuntu_gid: 1002, group_name: "researchers" },
-        { ubuntu_gid: 1003, group_name: "students" },
-        { ubuntu_gid: 1004, group_name: "faculty" },
-      ]);
+          if (imagesResponse.status === 200) {
+            setContainerImages(imagesResponse.data);
+          }
+        } catch (apiError) {
+          console.warn("API 호출 실패, Mock 데이터 사용:", apiError);
+        }
+        */
 
-      // Mock user's approved requests
-      setUserRequests([
-        {
-          request_id: 1,
-          rsgroup_id: 1,
-          image_id: 1,
-          volume_size_gb: 500,
-          expires_at: "2025-11-10",
-          ubuntu_gids: [1001, 1003], // 배열로 변경
-          status: "FULFILLED",
-          gpu_model: "RTX A3000",
-          image_name: "pytorch",
-          image_version: "2.0-cuda11.8",
-          group_names: ["default", "students"], // 그룹 이름들
-        },
-        {
-          request_id: 2,
-          rsgroup_id: 2,
-          image_id: 2,
-          volume_size_gb: 1000,
-          expires_at: "2025-12-15",
-          ubuntu_gids: [1002], // 배열로 변경
-          status: "FULFILLED",
-          gpu_model: "RTX 3090",
-          image_name: "tensorflow",
-          image_version: "2.13-cuda11.8",
-          group_names: ["researchers"], // 그룹 이름들
-        },
-      ]);
+        // Mock resource groups with GPU models
+        setResourceGroups([
+          {
+            rsgroup_id: 1,
+            description: "RTX A3000 GPU 그룹",
+            gpu_model: "RTX A3000",
+            ram_gb: 12,
+            nodes_count: 4,
+            available: true,
+          },
+          {
+            rsgroup_id: 2,
+            description: "RTX 3090 GPU 그룹",
+            gpu_model: "RTX 3090",
+            ram_gb: 24,
+            nodes_count: 2,
+            available: true,
+          },
+          {
+            rsgroup_id: 3,
+            description: "Ada A3000 GPU 그룹",
+            gpu_model: "Ada A3000",
+            ram_gb: 24,
+            nodes_count: 2,
+            available: true,
+          },
+          {
+            rsgroup_id: 4,
+            description: "RTX 4090 GPU 그룹",
+            gpu_model: "RTX 4090",
+            ram_gb: 24,
+            nodes_count: 1,
+            available: false,
+          },
+        ]);
 
-      // Set default expiry date (3 months from now)
-      const defaultExpiry = new Date();
-      defaultExpiry.setMonth(defaultExpiry.getMonth() + 3);
-      setFormData((prev) => ({
-        ...prev,
-        expires_at: defaultExpiry.toISOString().split("T")[0],
-      }));
+        // Mock container images with CUDA versions
+        setContainerImages([
+          {
+            image_id: 1,
+            image_name: "pytorch",
+            image_version: "2.0-cuda11.8",
+            cuda_version: "11.8",
+            description: "PyTorch 2.0 with CUDA 11.8",
+          },
+          {
+            image_id: 2,
+            image_name: "tensorflow",
+            image_version: "2.13-cuda11.8",
+            cuda_version: "11.8",
+            description: "TensorFlow 2.13 with CUDA 11.8",
+          },
+          {
+            image_id: 3,
+            image_name: "pytorch",
+            image_version: "2.1-cuda12.0",
+            cuda_version: "12.0",
+            description: "PyTorch 2.1 with CUDA 12.0",
+          },
+          {
+            image_id: 4,
+            image_name: "custom-ml",
+            image_version: "1.0-cuda12.1",
+            cuda_version: "12.1",
+            description: "Custom ML Environment with CUDA 12.1",
+          },
+        ]);
+
+        // Mock available groups
+        setAvailableGroups([
+          { ubuntu_gid: 1001, group_name: "default" },
+          { ubuntu_gid: 1002, group_name: "researchers" },
+          { ubuntu_gid: 1003, group_name: "students" },
+          { ubuntu_gid: 1004, group_name: "faculty" },
+        ]);
+
+        // Mock user's approved requests
+        setUserRequests([
+          {
+            request_id: 1,
+            rsgroup_id: 1,
+            image_id: 1,
+            volume_size_gb: 500,
+            expires_at: "2025-11-10",
+            ubuntu_gids: [1001, 1003], // 배열로 변경
+            status: "FULFILLED",
+            gpu_model: "RTX A3000",
+            image_name: "pytorch",
+            image_version: "2.0-cuda11.8",
+            group_names: ["default", "students"], // 그룹 이름들
+          },
+          {
+            request_id: 2,
+            rsgroup_id: 2,
+            image_id: 2,
+            volume_size_gb: 1000,
+            expires_at: "2025-12-15",
+            ubuntu_gids: [1002], // 배열로 변경
+            status: "FULFILLED",
+            gpu_model: "RTX 3090",
+            image_name: "tensorflow",
+            image_version: "2.13-cuda11.8",
+            group_names: ["researchers"], // 그룹 이름들
+          },
+        ]);
+
+        // Set default expiry date (3 months from now)
+        const defaultExpiry = new Date();
+        defaultExpiry.setMonth(defaultExpiry.getMonth() + 3);
+        setFormData((prev) => ({
+          ...prev,
+          expires_at: defaultExpiry.toISOString().split("T")[0],
+        }));
+      } catch (error) {
+        console.error("초기 데이터 로드 실패:", error);
+        setAlert({
+          type: "error",
+          message: "초기 데이터를 불러오는데 실패했습니다.",
+        });
+      } finally {
+        setIsInitialLoading(false);
+      }
     };
 
     fetchInitialData();
@@ -329,6 +364,12 @@ const ServerApplicationPage = ({ user }) => {
         "유효한 우분투 계정명을 입력해주세요. (소문자, 숫자, _, - 만 사용 가능)";
     }
 
+    if (!formData.ubuntu_password.trim()) {
+      newErrors.ubuntu_password = "우분투 계정 비밀번호를 입력해주세요.";
+    } else if (formData.ubuntu_password.length < 4) {
+      newErrors.ubuntu_password = "비밀번호는 최소 4자 이상이어야 합니다.";
+    }
+
     if (!formData.rsgroup_id) {
       newErrors.rsgroup_id = "GPU 기종을 선택해주세요.";
     }
@@ -416,39 +457,46 @@ const ServerApplicationPage = ({ user }) => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Mock API call
-
-      // Create request data matching DDL structure
+      // API 요청 데이터 구성 (curl 명령어와 일치)
       const requestData = {
-        user_id: user?.user_id,
-        rsgroup_id: parseInt(formData.rsgroup_id),
-        image_id: parseInt(formData.image_id),
-        ubuntu_username: formData.ubuntu_username,
-        expires_at: formData.expires_at,
-        volume_size_byte:
-          parseInt(formData.volume_size_gb) * 1024 * 1024 * 1024, // Convert GB to bytes
-        usage_purpose: formData.usage_purpose,
-        ubuntu_gids: formData.ubuntu_gids, // 배열로 변경
-        form_answers: {},
+        resourceGroupId: parseInt(formData.rsgroup_id),
+        imageId: parseInt(formData.image_id),
+        ubuntuUsername: formData.ubuntu_username,
+        ubuntuPassword: formData.ubuntu_password,
+        volumeSizeGiB: parseInt(formData.volume_size_gb),
+        usagePurpose: formData.usage_purpose,
+        formAnswers: {}, // 필요에 따라 추가 정보를 채울 수 있습니다
+        expiresAt: new Date(formData.expires_at).toISOString(),
+        ubuntuGids: formData.ubuntu_gids,
       };
 
       console.log("Request data:", requestData);
 
-      setAlert({
-        type: "success",
-        message:
-          "서버 신청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
-      });
+      // requestService를 사용하여 API 호출
+      const response = await requestService.createRequest(requestData);
 
-      // 3초 후 대시보드로 이동
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 3000);
-    } catch {
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message:
+            "서버 신청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
+        });
+
+        // 3초 후 대시보드로 이동
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 3000);
+      } else {
+        setAlert({
+          type: "error",
+          message: "서버 신청 중 오류가 발생했습니다. 다시 시도해주세요.",
+        });
+      }
+    } catch (error) {
+      console.error("Server application error:", error);
       setAlert({
         type: "error",
-        message: "서버 신청에 실패했습니다. 다시 시도해주세요.",
+        message: "서버 신청에 실패했습니다. 입력하신 정보를 확인해주세요.",
       });
     } finally {
       setIsLoading(false);
@@ -466,9 +514,6 @@ const ServerApplicationPage = ({ user }) => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Mock API call
-
       // Get old value for comparison
       const selectedRequest = userRequests.find(
         (req) => req.request_id === parseInt(changeFormData.request_id)
@@ -494,25 +539,37 @@ const ServerApplicationPage = ({ user }) => {
         old_value: oldValue,
         new_value: changeFormData.new_value,
         reason: changeFormData.reason,
-        requested_by: user?.user_id,
       };
 
       console.log("Change request data:", changeRequestData);
 
-      setAlert({
-        type: "success",
-        message:
-          "변경 요청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
-      });
+      // requestService를 사용하여 변경 요청 API 호출
+      const response = await requestService.createChangeRequest(
+        changeRequestData
+      );
 
-      // Reset form
-      setChangeFormData({
-        request_id: "",
-        change_type: "",
-        new_value: "",
-        reason: "",
-      });
-    } catch {
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message:
+            "변경 요청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
+        });
+
+        // Reset form
+        setChangeFormData({
+          request_id: "",
+          change_type: "",
+          new_value: "",
+          reason: "",
+        });
+      } else {
+        setAlert({
+          type: "error",
+          message: "변경 요청 중 오류가 발생했습니다. 다시 시도해주세요.",
+        });
+      }
+    } catch (error) {
+      console.error("Change request error:", error);
       setAlert({
         type: "error",
         message: "변경 요청에 실패했습니다. 다시 시도해주세요.",
@@ -642,6 +699,17 @@ const ServerApplicationPage = ({ user }) => {
     }
   };
 
+  if (isInitialLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F68313] mx-auto"></div>
+          <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -735,6 +803,21 @@ const ServerApplicationPage = ({ user }) => {
                   icon={UserIcon}
                 />
 
+                <Input
+                  label="우분투 계정 비밀번호"
+                  name="ubuntu_password"
+                  type="password"
+                  value={formData.ubuntu_password}
+                  onChange={handleChange}
+                  error={errors.ubuntu_password}
+                  placeholder="비밀번호를 입력하세요"
+                  help="최소 4자 이상 입력해주세요"
+                  required
+                  icon={KeyIcon}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
                 <Input
                   label="사용 만료일"
                   name="expires_at"

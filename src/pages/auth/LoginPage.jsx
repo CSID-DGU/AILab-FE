@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import Alert from "../../components/UI/Alert";
-import { authService } from "../../services/authService";
 
 const LoginPage = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -57,44 +56,24 @@ const LoginPage = ({ onLogin }) => {
     setAlert(null);
 
     try {
-      const response = await authService.login(
-        formData.email,
-        formData.password
-      );
+      // AuthContext의 login 함수 사용
+      const result = await onLogin({
+        email: formData.email,
+        password: formData.password,
+      });
 
-      // HTTP 상태 코드로 성공/실패 구분
-      if (response.status === 200 && response.data) {
-        // 성공 응답에서 토큰 정보 추출
-        const { accessToken, refreshToken } = response.data;
-
-        // 토큰을 로컬 스토리지에 저장
-        authService.setTokens(accessToken, refreshToken);
-
-        // Mock user data (실제로는 토큰을 디코딩하거나 추가 API 호출로 사용자 정보 가져옴)
-        const mockUser = {
-          id: 1,
-          name: "사용자",
-          email: formData.email,
-          role: formData.email.includes("admin") ? "ADMIN" : "USER",
-          department: "컴퓨터공학과",
-          studentId: "2021123456",
-        };
-
-        onLogin(mockUser);
-      } else {
-        // HTTP 200이 아닌 경우 구체적인 에러 메시지 표시
+      if (!result.success) {
         setAlert({
           type: "error",
-          message:
-            "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
+          message: result.error,
         });
       }
+      // 성공한 경우 AuthContext에서 자동으로 리다이렉트 처리됨
     } catch {
-      // 네트워크 에러나 기타 에러의 경우
+      // 네트워크 에러나 기타 예상치 못한 에러의 경우
       setAlert({
         type: "error",
-        message:
-          "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
+        message: "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
       });
     } finally {
       setIsLoading(false);

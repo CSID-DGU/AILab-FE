@@ -1,14 +1,13 @@
-﻿DROP TABLE IF EXISTS `Requests`;
-
-CREATE TABLE
+﻿CREATE TABLE
 	`Requests` (
 		`request_id` BIGINT NOT NULL,
 		`user_id` BIGINT NOT NULL,
 		`rsgroup_id` INT NOT NULL COMMENT '리소스 그룹 ID',
 		`image_id` BIGINT NOT NULL COMMENT '컨테이너 이미지 ID',
 		`ubuntu_username` VARCHAR(100) NOT NULL,
+		`ubuntu_password` VARCHAR(500) NULL,
 		`ubuntu_uid` BIGINT NOT NULL COMMENT 'ubuntu_uid',
-		`volume_size_byte` BIGINT NOT NULL,
+		`volume_size_GB` BIGINT NOT NULL,
 		`expires_at` TIMESTAMP NOT NULL,
 		`usage_purpose` VARCHAR(1000) NOT NULL,
 		`form_answers` JSON NOT NULL,
@@ -18,8 +17,6 @@ CREATE TABLE
 		`created_at` TIMESTAMP NOT NULL,
 		`updated_at` TIMESTAMP NOT NULL
 	);
-
-DROP TABLE IF EXISTS `ContainerImages`;
 
 CREATE TABLE
 	`ContainerImages` (
@@ -31,28 +28,21 @@ CREATE TABLE
 		`created_at` TIMESTAMP NOT NULL
 	);
 
-DROP TABLE IF EXISTS `Groups`;
-
 CREATE TABLE
 	`Groups` (
 		`ubuntu_gid` BIGINT NOT NULL,
 		`group_name` VARCHAR(100) NOT NULL
 	);
 
-DROP TABLE IF EXISTS `ResourceGroups`;
-
 CREATE TABLE
 	`ResourceGroups` (
 		`rsgroup_id` INT NOT NULL,
-		`description` VARCHAR(500) NULL
+		`description` VARCHAR(500) NULL,
+		`server_name` VARCHAR(300) NULL
 	);
-
-DROP TABLE IF EXISTS `UsedIds`;
 
 CREATE TABLE
 	`UsedIds` (`id_value` BIGINT NOT NULL COMMENT 'UID 또는 GID 값');
-
-DROP TABLE IF EXISTS `Users`;
 
 CREATE TABLE
 	`Users` (
@@ -69,8 +59,6 @@ CREATE TABLE
 		`is_active` BOOLEAN NOT NULL
 	);
 
-DROP TABLE IF EXISTS `GPUs`;
-
 CREATE TABLE
 	`GPUs` (
 		`gpu_id` BIGINT NOT NULL,
@@ -79,16 +67,12 @@ CREATE TABLE
 		`RAM_GB` INT NOT NULL
 	);
 
-DROP TABLE IF EXISTS `RequestGroups`;
-
 CREATE TABLE
 	`RequestGroups` (
 		`request_id` BIGINT NOT NULL,
 		`ubuntu_gid` BIGINT NOT NULL,
 		`created_at` TIMESTAMP NOT NULL
 	);
-
-DROP TABLE IF EXISTS `ChangeRequests`;
 
 CREATE TABLE
 	`ChangeRequests` (
@@ -111,8 +95,6 @@ CREATE TABLE
 		`created_at` TIMESTAMP NOT NULL,
 		`reviewed_at` TIMESTAMP NULL COMMENT '검토 완료 시간'
 	);
-
-DROP TABLE IF EXISTS `Nodes`;
 
 CREATE TABLE
 	`Nodes` (

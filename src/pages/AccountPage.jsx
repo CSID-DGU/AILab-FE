@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { authService } from "../services/authService";
 import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
 import Input from "../components/UI/Input";
@@ -16,9 +17,7 @@ import {
 const AccountPage = ({ user }) => {
   const [activeTab, setActiveTab] = useState("profile");
   const [formData, setFormData] = useState({
-    name: "",
     phone: "",
-    department: "",
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -33,9 +32,7 @@ const AccountPage = ({ user }) => {
     // 사용자 정보 로드
     if (user) {
       setFormData({
-        name: user.name || "",
         phone: user.phone || "",
-        department: user.department || "",
       });
     }
   }, [user]);
@@ -73,18 +70,10 @@ const AccountPage = ({ user }) => {
   const validateProfileForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "이름을 입력해주세요.";
-    }
-
     if (!formData.phone.trim()) {
       newErrors.phone = "전화번호를 입력해주세요.";
     } else if (!/^[0-9-]+$/.test(formData.phone)) {
       newErrors.phone = "올바른 전화번호 형식을 입력해주세요.";
-    }
-
-    if (!formData.department.trim()) {
-      newErrors.department = "학과를 입력해주세요.";
     }
 
     setErrors(newErrors);
@@ -102,6 +91,11 @@ const AccountPage = ({ user }) => {
       newErrors.newPassword = "새 비밀번호를 입력해주세요.";
     } else if (passwordData.newPassword.length < 8) {
       newErrors.newPassword = "비밀번호는 8자 이상이어야 합니다.";
+    } else if (
+      passwordData.currentPassword &&
+      passwordData.currentPassword === passwordData.newPassword
+    ) {
+      newErrors.newPassword = "새 비밀번호는 현재 비밀번호와 달라야 합니다.";
     }
 
     if (!passwordData.confirmPassword) {
@@ -125,17 +119,28 @@ const AccountPage = ({ user }) => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock API call
+      const response = await authService.updatePhone(formData.phone);
 
-      setAlert({
-        type: "success",
-        message: "프로필 정보가 성공적으로 업데이트되었습니다.",
-      });
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message: "휴대폰 번호가 성공적으로 업데이트되었습니다.",
+        });
+
+        // 사용자 정보 다시 불러오기
+        const updatedUserResponse = await authService.getUserInfo();
+        if (updatedUserResponse.status === 200 && updatedUserResponse.data) {
+          // 부모 컴포넌트에서 전달된 user를 업데이트할 수 있도록 하는 로직 필요
+          // 현재는 props로 받고 있으므로 AuthContext를 직접 사용하거나
+          // 부모 컴포넌트에서 업데이트 콜백을 전달받아야 함
+        }
+      } else {
+        throw new Error("휴대폰 번호 업데이트에 실패했습니다.");
+      }
     } catch {
       setAlert({
         type: "error",
-        message: "프로필 업데이트에 실패했습니다. 다시 시도해주세요.",
+        message: "휴대폰 번호 업데이트에 실패했습니다. 다시 시도해주세요.",
       });
     } finally {
       setIsLoading(false);
@@ -153,20 +158,26 @@ const AccountPage = ({ user }) => {
     setAlert(null);
 
     try {
-      // TODO: API 호출로 대체
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Mock API call
+      const response = await authService.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
 
-      setAlert({
-        type: "success",
-        message: "비밀번호가 성공적으로 변경되었습니다.",
-      });
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message: "비밀번호가 성공적으로 변경되었습니다.",
+        });
 
-      // 폼 초기화
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+        // 폼 초기화
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        throw new Error("비밀번호 변경에 실패했습니다.");
+      }
     } catch {
       setAlert({
         type: "error",
@@ -178,7 +189,7 @@ const AccountPage = ({ user }) => {
   };
 
   const tabs = [
-    { id: "profile", name: "프로필 정보", icon: UserIcon },
+    { id: "profile", name: "개인정보", icon: UserIcon },
     { id: "password", name: "비밀번호 변경", icon: LockClosedIcon },
   ];
 
@@ -240,7 +251,7 @@ const AccountPage = ({ user }) => {
                   기본 정보
                 </h3>
                 <p className="text-sm text-gray-600 mb-6">
-                  개인정보를 업데이트하세요. 이메일과 학번은 변경할 수 없습니다.
+                  개인정보를 확인하세요. 휴대폰 번호만 변경할 수 있습니다.
                 </p>
               </div>
 
@@ -251,7 +262,7 @@ const AccountPage = ({ user }) => {
                     <EnvelopeIcon className="w-4 h-4 inline mr-1" />
                     이메일
                   </label>
-                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-md">
                     {user?.email || "이메일 정보 없음"}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -264,11 +275,37 @@ const AccountPage = ({ user }) => {
                     <IdentificationIcon className="w-4 h-4 inline mr-1" />
                     학번
                   </label>
-                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-md">
                     {user?.studentId || "학번 정보 없음"}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     학번은 변경할 수 없습니다.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <UserIcon className="w-4 h-4 inline mr-1" />
+                    이름
+                  </label>
+                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-md">
+                    {user?.name || "이름 정보 없음"}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    이름은 변경할 수 없습니다.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <AcademicCapIcon className="w-4 h-4 inline mr-1" />
+                    학과
+                  </label>
+                  <div className="px-3 py-2 border border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-md">
+                    {user?.department || "학과 정보 없음"}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    학과는 변경할 수 없습니다.
                   </p>
                 </div>
               </div>
@@ -276,18 +313,6 @@ const AccountPage = ({ user }) => {
               {/* Editable form */}
               <form onSubmit={handleProfileSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="이름"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleProfileChange}
-                    error={errors.name}
-                    placeholder="이름을 입력하세요"
-                    required
-                    icon={UserIcon}
-                  />
-
                   <Input
                     label="전화번호"
                     name="phone"
@@ -299,20 +324,6 @@ const AccountPage = ({ user }) => {
                     required
                     icon={PhoneIcon}
                   />
-
-                  <div className="md:col-span-2">
-                    <Input
-                      label="학과"
-                      name="department"
-                      type="text"
-                      value={formData.department}
-                      onChange={handleProfileChange}
-                      error={errors.department}
-                      placeholder="학과를 입력하세요"
-                      required
-                      icon={AcademicCapIcon}
-                    />
-                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-3 pt-6 border-t border-gray-300">
@@ -321,9 +332,7 @@ const AccountPage = ({ user }) => {
                     variant="outline"
                     onClick={() => {
                       setFormData({
-                        name: user?.name || "",
                         phone: user?.phone || "",
-                        department: user?.department || "",
                       });
                       setErrors({});
                     }}
@@ -399,6 +408,7 @@ const AccountPage = ({ user }) => {
                     <h4 className="font-medium mb-2">비밀번호 요구사항:</h4>
                     <ul className="list-disc list-inside space-y-1">
                       <li>최소 8자 이상</li>
+                      <li>현재 비밀번호와 달라야 함</li>
                       <li>영문자, 숫자, 특수문자 조합 권장</li>
                       <li>개인정보와 관련없는 비밀번호 사용</li>
                     </ul>
@@ -460,19 +470,19 @@ const AccountPage = ({ user }) => {
             </h4>
             <div
               className={`inline-flex px-2 py-1 text-xs font-medium ${
-                user?.is_active
+                user?.isActive
                   ? "bg-green-100 text-green-800"
                   : "bg-red-100 text-red-800"
               }`}
             >
-              {user?.is_active ? "활성" : "비활성"}
+              {user?.isActive ? "활성" : "비활성"}
             </div>
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-900 mb-2">가입일</h4>
             <p className="text-sm text-gray-600">
-              {user?.created_at
-                ? new Date(user.created_at).toLocaleDateString()
+              {user?.createdAt
+                ? new Date(user.createdAt).toLocaleDateString()
                 : "정보 없음"}
             </p>
           </div>
@@ -481,8 +491,8 @@ const AccountPage = ({ user }) => {
               최종 수정일
             </h4>
             <p className="text-sm text-gray-600">
-              {user?.updated_at
-                ? new Date(user.updated_at).toLocaleDateString()
+              {user?.updatedAt
+                ? new Date(user.updatedAt).toLocaleDateString()
                 : "정보 없음"}
             </p>
           </div>

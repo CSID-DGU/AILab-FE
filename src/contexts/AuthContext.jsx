@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from "react";
+import { authService } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -11,27 +12,25 @@ export const AuthProvider = ({ children }) => {
     // Check if user is logged in on app start
     const checkAuthStatus = async () => {
       try {
-        // Check for stored auth token or session
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
+        // Check for stored auth token
+        const accessToken = authService.getAccessToken();
+        const refreshToken = authService.getRefreshToken();
 
-        if (storedUser && token) {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-          setIsAuthenticated(true);
+        if (accessToken && refreshToken) {
+          // Verify token with server and get user info
+          const response = await authService.getUserInfo();
 
-          // TODO: Verify token with server
-          // const response = await fetch("/api/auth/verify", {
-          //   headers: { Authorization: `Bearer ${token}` }
-          // });
-          // if (!response.ok) {
-          //   throw new Error("Token invalid");
-          // }
+          if (response.status === 200 && response.data) {
+            setUser(response.data.data);
+            setIsAuthenticated(true);
+          } else {
+            throw new Error("사용자 정보를 가져올 수 없습니다.");
+          }
         }
-      } catch {
+      } catch (error) {
+        console.error("Auth verification failed:", error);
         // Clear invalid stored data
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+        authService.clearTokens();
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -44,48 +43,46 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch("/api/auth/login", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(credentials)
-      // });
+      // 실제 API 호출
+      const response = await authService.login(
+        credentials.email,
+        credentials.password
+      );
 
-      // if (!response.ok) {
-      //   throw new Error("Login failed");
-      // }
+      if (response.status === 200 && response.data) {
+        // 토큰 저장
+        authService.setTokens(
+          response.data.accessToken,
+          response.data.refreshToken
+        );
 
-      // const data = await response.json();
+        // 사용자 정보 조회
+        const userResponse = await authService.getUserInfo();
 
-      // Mock login for development
-      const mockUser = {
-        id: 1,
-        name: "홍길동",
-        email: credentials.email,
-        role: credentials.email.includes("admin") ? "ADMIN" : "USER",
-        department: "컴퓨터공학과",
-        studentId: "2021123456",
-        phone: "010-1234-5678",
-      };
+        if (userResponse.status === 200 && userResponse.data) {
+          const userData = userResponse.data.data;
+          setUser(userData);
+          setIsAuthenticated(true);
 
-      const mockToken = "mock-jwt-token-" + Date.now();
-
-      // Store user data and token
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      localStorage.setItem("token", mockToken);
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-
-      return { success: true, user: mockUser };
+          return { success: true, user: userData };
+        } else {
+          throw new Error("사용자 정보를 가져올 수 없습니다.");
+        }
+      } else {
+        throw new Error("로그인에 실패했습니다.");
+      }
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error("Login failed:", error);
+      return {
+        success: false,
+        error:
+          "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
+      };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    authService.clearTokens();
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -112,10 +109,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = (updatedUserData) => {
-    const updatedUser = { ...user, ...updatedUserData };
-    setUser(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+  const updateUser = async () => {
+    try {
+      // 사용자 정보를 다시 불러와서 최신 상태로 업데이트
+      const response = await authService.getUserInfo();
+
+      if (response.status === 200 && response.data) {
+        const userData = response.data.data;
+        setUser(userData);
+        return { success: true, user: userData };
+      } else {
+        throw new Error("사용자 정보 업데이트에 실패했습니다.");
+      }
+    } catch (error) {
+      console.error("User update failed:", error);
+      return {
+        success: false,
+        error: "사용자 정보를 업데이트할 수 없습니다. 다시 시도해주세요.",
+      };
+    }
   };
 
   const value = {
