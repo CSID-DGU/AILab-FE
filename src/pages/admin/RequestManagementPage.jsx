@@ -8,6 +8,7 @@ import {
   UserIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ServerIcon,
 } from "@heroicons/react/24/outline";
 import Card from "../../components/UI/Card";
 import Badge from "../../components/UI/Badge";
@@ -34,30 +35,32 @@ const RequestManagementPage = () => {
           // API 응답 데이터를 기존 UI에 맞게 변환
           const transformedRequests = response.data.map((request) => ({
             request_id: request.requestId,
-            user_id: request.userId || "N/A",
-            user_name: request.userName || "알 수 없음",
-            user_email: request.userEmail || "N/A",
-            student_id: request.studentId || "N/A",
-            department: request.department || "N/A",
+            user_id: request.user.userId,
+            user_name: request.user.name,
+            user_email: request.user.email,
+            user_phone: request.user.phone,
+            student_id: request.user.studentId,
+            department: request.user.department,
+            is_active: request.user.isActive,
             rsgroup_id: request.resourceGroupId,
-            rsgroup_name: `RG-${request.resourceGroupId}`,
-            image_id: request.imageId || "N/A",
+            rsgroup_name: request.resourceGroup.resourceGroupName,
+            rsgroup_description: request.resourceGroup.description,
+            server_name: request.resourceGroup.serverName,
+            image_id: request.imageId, // 허용 버튼 처리 시 사용할 imageId 저장
             image_name: request.imageName,
             image_version: request.imageVersion,
             ubuntu_username: request.ubuntuUsername,
             ubuntu_uid: request.ubuntuUid,
             ubuntu_gids: request.ubuntuGids,
-            volume_size_GB: request.volumeSizeByte,
+            volume_size_GB: request.volumeSizeGiB,
             expires_at: request.expiresAt,
             usage_purpose: request.usagePurpose,
             form_answers: request.formAnswers,
             status: request.status,
             admin_comment: request.comment,
             approved_at: request.approvedAt,
-            created_at: new Date(
-              Date.now() - (1000 - request.requestId) * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            updated_at: request.approvedAt || new Date().toISOString(),
+            created_at: request.createdAt,
+            updated_at: request.updatedAt,
           }));
 
           setRequests(transformedRequests);
@@ -65,7 +68,7 @@ const RequestManagementPage = () => {
           setAlert({
             type: "error",
             message:
-              "신청서 목록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+              "신청서 목록을 불러올 수 없습니다. 서버 상태를 확인하시거나 관리자에게 문의해주세요.",
           });
         }
       } catch (error) {
@@ -73,7 +76,7 @@ const RequestManagementPage = () => {
         setAlert({
           type: "error",
           message:
-            "신청서 목록을 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            "신청서 목록 로딩 중 네트워크 오류가 발생했습니다. 인터넷 연결을 확인하시고 페이지를 새로고침해주세요.",
         });
       } finally {
         setIsLoading(false);
@@ -131,26 +134,51 @@ const RequestManagementPage = () => {
     }
   };
 
-  const handleStatusUpdate = async (requestId, newStatus, comment = "") => {
+  const handleStatusUpdate = async (request, newStatus, comment = "") => {
     try {
-      const response = await requestService.updateRequestStatus(
-        requestId,
-        newStatus,
-        comment
-      );
+      let response;
+
+      if (newStatus === "FULFILLED") {
+        // 승인 API 호출
+        const approvalData = {
+          requestId: request.request_id,
+          imageId: request.image_id,
+          resourceGroupId: request.rsgroup_id,
+          volumeSizeGiB: request.volume_size_GB,
+          expiresAt: request.expires_at,
+          adminComment: comment,
+        };
+        response = await requestService.approveRequest(approvalData);
+      } else if (newStatus === "DENIED") {
+        // 거절 API 호출
+        const rejectData = {
+          requestId: request.request_id,
+          adminComment: comment,
+        };
+        response = await requestService.rejectRequest(rejectData);
+      } else {
+        // 기존 API 사용 (다른 상태들)
+        response = await requestService.updateRequestStatus(
+          request.request_id,
+          newStatus,
+          comment
+        );
+      }
 
       if (response.status === 200) {
+        // API 응답으로 받은 업데이트된 데이터로 state 업데이트
+        const updatedRequest = response.data;
         setRequests((prev) =>
           prev.map((req) =>
-            req.request_id === requestId
+            req.request_id === request.request_id
               ? {
                   ...req,
-                  status: newStatus,
-                  admin_comment: comment,
-                  updated_at: new Date().toISOString(),
-                  ...(newStatus === "FULFILLED" && {
-                    approved_at: new Date().toISOString(),
-                  }),
+                  status: updatedRequest.status,
+                  admin_comment: updatedRequest.comment,
+                  updated_at: updatedRequest.updatedAt,
+                  approved_at: updatedRequest.approvedAt,
+                  ubuntu_uid: updatedRequest.ubuntuUid,
+                  ubuntu_gids: updatedRequest.ubuntuGids,
                 }
               : req
           )
@@ -158,26 +186,54 @@ const RequestManagementPage = () => {
 
         setAlert({
           type: "success",
-          message: `신청서가 ${
+          message: `${request.user_name}님의 신청서가 성공적으로 ${
             newStatus === "FULFILLED" ? "승인" : "거절"
           }되었습니다.`,
         });
 
         setSelectedRequest(null);
+
+        // 승인 처리 시 추가 정보 로깅
+        if (newStatus === "FULFILLED") {
+          console.log("승인 처리 완료:", {
+            requestId: request.request_id,
+            imageId: request.image_id,
+            userId: request.user_id,
+            resourceGroupId: request.rsgroup_id,
+            ubuntuUid: updatedRequest.ubuntuUid,
+            ubuntuGids: updatedRequest.ubuntuGids,
+          });
+        }
+      } else if (response.status === 409) {
+        setAlert({
+          type: "error",
+          message:
+            "이 신청서는 이미 처리되었습니다. 페이지를 새로고침하여 최신 상태를 확인해주세요.",
+        });
       } else {
         setAlert({
           type: "error",
           message:
-            "상태 업데이트 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+            "신청서 처리 중 오류가 발생했습니다. 네트워크 연결을 확인하시거나 잠시 후 다시 시도해주세요.",
         });
       }
     } catch (error) {
       console.error("Failed to update request status:", error);
-      setAlert({
-        type: "error",
-        message:
-          "상태 업데이트 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-      });
+
+      // 409 상태 코드 처리
+      if (error.message && error.message.includes("409")) {
+        setAlert({
+          type: "error",
+          message:
+            "이 신청서는 이미 다른 관리자에 의해 처리되었습니다. 페이지를 새로고침해주세요.",
+        });
+      } else {
+        setAlert({
+          type: "error",
+          message:
+            "서버와의 연결에 문제가 발생했습니다. 인터넷 연결을 확인하시고 잠시 후 다시 시도해주세요.",
+        });
+      }
     }
   };
 
@@ -205,11 +261,9 @@ const RequestManagementPage = () => {
   return (
     <div className="space-y-6">
       {alert && (
-        <Alert
-          type={alert.type}
-          message={alert.message}
-          onClose={() => setAlert(null)}
-        />
+        <Alert type={alert.type} onClose={() => setAlert(null)}>
+          {alert.message}
+        </Alert>
       )}
 
       {/* Header */}
@@ -283,34 +337,34 @@ const RequestManagementPage = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
                         사용자 정보
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
                         {request.student_id} | {request.department}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                        리소스
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        리소스 그룹
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {request.rsgroup_name} | {request.volume_size_GB}GB
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                        이미지
-                      </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {request.image_name}
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {request.rsgroup_name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        이미지 & 볼륨
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {request.image_name}:{request.image_version}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
                         만료일
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
                         {new Date(request.expires_at).toLocaleDateString(
                           "ko-KR"
                         )}
@@ -318,11 +372,47 @@ const RequestManagementPage = () => {
                     </div>
                   </div>
 
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 mt-3 pt-3 border-t border-gray-100">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        이메일
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.user_email}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        서버
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.server_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        볼륨 크기
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.volume_size_GB} GiB
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        Ubuntu 계정
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.ubuntu_username}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
+                    <p className="text-xs font-medium text-gray-700 uppercase tracking-tight mb-1">
                       사용 목적
                     </p>
-                    <p className="text-sm text-gray-900">
+                    <p className="text-sm text-gray-900 tracking-tight">
                       {request.usage_purpose}
                     </p>
                   </div>
@@ -366,39 +456,56 @@ const RequestManagementPage = () => {
                     상세보기
                   </Button>
 
+                  {request.status === "FULFILLED" && (
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => {
+                        const comment = prompt("승인철회 사유를 입력하세요:");
+                        if (comment) {
+                          handleStatusUpdate(request, "DENIED", comment);
+                        }
+                      }}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <XMarkIcon className="w-4 h-4 mr-1" />
+                      승인철회
+                    </Button>
+                  )}
+
                   {request.status === "PENDING" && (
                     <div className="flex space-x-2">
-                      <Button
-                        variant="success"
-                        size="small"
-                        onClick={() =>
-                          handleStatusUpdate(
-                            request.request_id,
-                            "FULFILLED",
-                            "승인되었습니다."
-                          )
-                        }
-                      >
-                        <CheckIcon className="w-4 h-4 mr-1" />
-                        승인
-                      </Button>
-                      <Button
-                        variant="danger"
-                        size="small"
+                      <button
                         onClick={() => {
-                          const comment = prompt("거절 사유를 입력하세요:");
-                          if (comment) {
+                          const comment = prompt(
+                            "승인 사유를 입력하세요:",
+                            "승인되었습니다."
+                          );
+                          if (comment !== null) {
                             handleStatusUpdate(
-                              request.request_id,
-                              "DENIED",
-                              comment
+                              request,
+                              "FULFILLED",
+                              comment || "승인되었습니다."
                             );
                           }
                         }}
+                        className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 transition-colors flex items-center"
+                      >
+                        <CheckIcon className="w-4 h-4 mr-1" />
+                        승인
+                      </button>
+                      <button
+                        onClick={() => {
+                          const comment = prompt("거절 사유를 입력하세요:");
+                          if (comment) {
+                            handleStatusUpdate(request, "DENIED", comment);
+                          }
+                        }}
+                        className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors flex items-center"
                       >
                         <XMarkIcon className="w-4 h-4 mr-1" />
                         거절
-                      </Button>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -459,6 +566,18 @@ const RequestManagementPage = () => {
                           {selectedRequest.user_email}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          계정 상태
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.is_active ? (
+                            <Badge variant="success">활성</Badge>
+                          ) : (
+                            <Badge variant="danger">비활성</Badge>
+                          )}
+                        </p>
+                      </div>
                     </div>
                     <div className="space-y-3">
                       <div>
@@ -475,6 +594,52 @@ const RequestManagementPage = () => {
                         </p>
                         <p className="text-sm text-gray-900">
                           {selectedRequest.department}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          전화번호
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.user_phone || "등록되지 않음"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resource Group Information */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                    리소스 그룹 정보
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          리소스 그룹명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.rsgroup_name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          서버명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.server_name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          설명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.rsgroup_description}
                         </p>
                       </div>
                     </div>
@@ -499,18 +664,18 @@ const RequestManagementPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          리소스 그룹
+                          볼륨 크기
                         </p>
                         <p className="text-sm text-gray-900">
-                          {selectedRequest.rsgroup_name}
+                          {selectedRequest.volume_size_GB} GiB
                         </p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          볼륨 크기
+                          Ubuntu UID
                         </p>
                         <p className="text-sm text-gray-900">
-                          {selectedRequest.volume_size_GB}GB
+                          {selectedRequest.ubuntu_uid || "설정되지 않음"}
                         </p>
                       </div>
                     </div>
@@ -534,14 +699,6 @@ const RequestManagementPage = () => {
                           ).toLocaleDateString("ko-KR")}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">
-                          Ubuntu UID
-                        </p>
-                        <p className="text-sm text-gray-900">
-                          {selectedRequest.ubuntu_uid || "설정되지 않음"}
-                        </p>
-                      </div>
                       {selectedRequest.ubuntu_gids &&
                         selectedRequest.ubuntu_gids.length > 0 && (
                           <div>
@@ -563,27 +720,28 @@ const RequestManagementPage = () => {
                       {selectedRequest.usage_purpose}
                     </p>
                   </div>
-                  {selectedRequest.form_answers && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        추가 정보
-                      </p>
-                      <div className="bg-gray-50 p-3 rounded space-y-2">
-                        {Object.entries(selectedRequest.form_answers).map(
-                          ([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                              <span className="text-sm font-medium text-gray-600 capitalize">
-                                {key.replace("_", " ")}:
-                              </span>
-                              <span className="text-sm text-gray-900">
-                                {value}
-                              </span>
-                            </div>
-                          )
-                        )}
+                  {selectedRequest.form_answers &&
+                    Object.keys(selectedRequest.form_answers).length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          추가 정보
+                        </p>
+                        <div className="bg-gray-50 p-3 rounded space-y-2">
+                          {Object.entries(selectedRequest.form_answers).map(
+                            ([key, value]) => (
+                              <div key={key} className="flex justify-between">
+                                <span className="text-sm font-medium text-gray-600 capitalize">
+                                  {key.replace("_", " ")}:
+                                </span>
+                                <span className="text-sm text-gray-900">
+                                  {value}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Status History */}
@@ -634,13 +792,19 @@ const RequestManagementPage = () => {
                 <div className="mt-6 flex justify-end space-x-3 border-t pt-4">
                   <Button
                     variant="success"
-                    onClick={() =>
-                      handleStatusUpdate(
-                        selectedRequest.request_id,
-                        "FULFILLED",
+                    onClick={() => {
+                      const comment = prompt(
+                        "승인 사유를 입력하세요:",
                         "승인되었습니다."
-                      )
-                    }
+                      );
+                      if (comment !== null) {
+                        handleStatusUpdate(
+                          selectedRequest,
+                          "FULFILLED",
+                          comment || "승인되었습니다."
+                        );
+                      }
+                    }}
                   >
                     <CheckIcon className="w-4 h-4 mr-1" />
                     승인
@@ -650,16 +814,29 @@ const RequestManagementPage = () => {
                     onClick={() => {
                       const comment = prompt("거절 사유를 입력하세요:");
                       if (comment) {
-                        handleStatusUpdate(
-                          selectedRequest.request_id,
-                          "DENIED",
-                          comment
-                        );
+                        handleStatusUpdate(selectedRequest, "DENIED", comment);
                       }
                     }}
                   >
                     <XMarkIcon className="w-4 h-4 mr-1" />
                     거절
+                  </Button>
+                </div>
+              )}
+
+              {selectedRequest.status === "FULFILLED" && (
+                <div className="mt-6 flex justify-end space-x-3 border-t pt-4">
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      const comment = prompt("승인철회 사유를 입력하세요:");
+                      if (comment) {
+                        handleStatusUpdate(selectedRequest, "DENIED", comment);
+                      }
+                    }}
+                  >
+                    <XMarkIcon className="w-4 h-4 mr-1" />
+                    승인철회
                   </Button>
                 </div>
               )}

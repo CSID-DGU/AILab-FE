@@ -1,5 +1,7 @@
 import { createContext, useState, useEffect } from "react";
 import { authService } from "../services/authService";
+import SessionExpiredModal from "../components/UI/SessionExpiredModal";
+import { sessionEventManager } from "../services/sessionEventManager";
 
 const AuthContext = createContext(null);
 
@@ -7,6 +9,24 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSessionExpiredModal, setShowSessionExpiredModal] = useState(false);
+
+  const logout = () => {
+    authService.clearTokens();
+    setUser(null);
+    setIsAuthenticated(false);
+  };
+
+  const handleSessionExpired = () => {
+    setShowSessionExpiredModal(true);
+  };
+
+  const handleSessionExpiredConfirm = () => {
+    setShowSessionExpiredModal(false);
+    logout();
+    // 로그인 페이지로 리다이렉트
+    window.location.href = "/login";
+  };
 
   useEffect(() => {
     // Check if user is logged in on app start
@@ -39,6 +59,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuthStatus();
+
+    // 세션 만료 이벤트 리스너 등록
+    const unsubscribe =
+      sessionEventManager.onSessionExpired(handleSessionExpired);
+
+    // 클린업
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const login = async (credentials) => {
@@ -79,12 +108,6 @@ export const AuthProvider = ({ children }) => {
           "이메일 또는 비밀번호가 올바르지 않습니다. 입력하신 정보를 다시 확인해주세요.",
       };
     }
-  };
-
-  const logout = () => {
-    authService.clearTokens();
-    setUser(null);
-    setIsAuthenticated(false);
   };
 
   const signup = async () => {
@@ -138,9 +161,18 @@ export const AuthProvider = ({ children }) => {
     logout,
     signup,
     updateUser,
+    handleSessionExpired,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <SessionExpiredModal
+        isOpen={showSessionExpiredModal}
+        onConfirm={handleSessionExpiredConfirm}
+      />
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthContext;

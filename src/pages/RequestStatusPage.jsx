@@ -14,6 +14,7 @@ import {
   ServerIcon,
   EyeIcon,
   PlusIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 
 const RequestStatusPage = () => {
@@ -36,28 +37,31 @@ const RequestStatusPage = () => {
           // API 응답 데이터를 기존 UI에 맞게 변환
           const transformedRequests = response.data.map((request) => ({
             request_id: request.requestId,
-            user_id: user?.user_id,
-            node_id: `RG-${request.resourceGroupId}`,
+            user_id: request.user.userId,
+            user_name: request.user.name,
+            user_email: request.user.email,
+            user_phone: request.user.phone,
+            student_id: request.user.studentId,
+            department: request.user.department,
+            is_active: request.user.isActive,
+            rsgroup_id: request.resourceGroupId,
+            rsgroup_name: request.resourceGroup.resourceGroupName,
+            rsgroup_description: request.resourceGroup.description,
+            server_name: request.resourceGroup.serverName,
             image_name: request.imageName,
             image_version: request.imageVersion,
-            ubuntu_gid:
-              request.ubuntuGids?.length > 0
-                ? request.ubuntuGids.join(", ")
-                : null,
             ubuntu_username: request.ubuntuUsername,
             ubuntu_uid: request.ubuntuUid,
+            ubuntu_gids: request.ubuntuGids,
+            volume_size_GB: request.volumeSizeGiB,
             expires_at: request.expiresAt,
-            volume_size_byte: request.volumeSizeByte * 1024 * 1024 * 1024, // GB to bytes
             usage_purpose: request.usagePurpose,
             form_answers: request.formAnswers,
-            approved_at: request.approvedAt,
             status: request.status,
-            comment: request.comment,
-            // API에서 제공되지 않는 created_at은 요청 ID로 대략적인 순서 유지
-            created_at: new Date(
-              Date.now() - (1000 - request.requestId) * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            updated_at: request.approvedAt || new Date().toISOString(),
+            admin_comment: request.comment,
+            approved_at: request.approvedAt,
+            created_at: request.createdAt,
+            updated_at: request.updatedAt,
           }));
 
           setRequests(transformedRequests);
@@ -87,14 +91,14 @@ const RequestStatusPage = () => {
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "FULFILLED":
-        return <Badge variant="success">승인됨</Badge>;
       case "PENDING":
         return <Badge variant="warning">대기중</Badge>;
+      case "FULFILLED":
+        return <Badge variant="success">승인됨</Badge>;
       case "DENIED":
         return <Badge variant="danger">거절됨</Badge>;
       default:
-        return <Badge variant="default">알 수 없음</Badge>;
+        return <Badge variant="default">{status}</Badge>;
     }
   };
 
@@ -111,34 +115,14 @@ const RequestStatusPage = () => {
     }
   };
 
-  const formatBytes = (bytes) => {
-    return Math.round(bytes / (1024 * 1024 * 1024)) + " GB";
-  };
-
   const formatDate = (dateString) => {
-    if (!dateString) return "정보 없음";
-
-    try {
-      // ISO 8601 형식 처리
-      const date = new Date(dateString);
-      return date.toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "날짜 형식 오류";
-    }
-  };
-
-  const getDaysUntilExpiry = (expiryDate) => {
-    const today = new Date();
-    const expiry = new Date(expiryDate);
-    const diffTime = expiry - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    return new Date(dateString).toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const filteredRequests = requests
@@ -270,63 +254,89 @@ const RequestStatusPage = () => {
                   <div className="flex items-center space-x-3 mb-3">
                     {getStatusIcon(request.status)}
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {request.node_id} - {request.ubuntu_username}
+                      #{request.request_id} - {request.ubuntu_username}
                     </h3>
                     {getStatusBadge(request.status)}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        리소스 그룹
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {request.rsgroup_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        이미지 & 볼륨
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {request.image_name}:{request.image_version}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        볼륨 크기
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {request.volume_size_GB} GiB
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight">
+                        만료일
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1 tracking-tight">
+                        {new Date(request.expires_at).toLocaleDateString(
+                          "ko-KR"
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 mt-3 pt-3 border-t border-gray-100">
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        서버
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.server_name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        Ubuntu 계정
+                      </p>
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.ubuntu_username}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
                         신청일
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
                         {formatDate(request.created_at)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                        만료일
+                      <p className="text-xs font-medium text-gray-600 tracking-tight">
+                        Ubuntu GIDs
                       </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {new Date(request.expires_at).toLocaleDateString()}
-                        {request.status === "FULFILLED" && (
-                          <span
-                            className={`ml-2 text-xs ${
-                              getDaysUntilExpiry(request.expires_at) <= 7
-                                ? "text-red-600"
-                                : "text-gray-500"
-                            }`}
-                          >
-                            (D-{getDaysUntilExpiry(request.expires_at)})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                        볼륨 크기
-                      </p>
-                      <p className="text-sm text-gray-900 mt-1">
-                        {formatBytes(request.volume_size_byte)}
+                      <p className="text-sm text-gray-700 mt-1 tracking-tight">
+                        {request.ubuntu_gids?.join(", ") || "설정되지 않음"}
                       </p>
                     </div>
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
-                      컨테이너 이미지
-                    </p>
-                    <p className="text-sm text-gray-900">
-                      {request.image_name}:{request.image_version}
-                    </p>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
+                    <p className="text-xs font-medium text-gray-700 uppercase tracking-tight mb-1">
                       사용 목적
                     </p>
-                    <p className="text-sm text-gray-900">
+                    <p className="text-sm text-gray-900 tracking-tight">
                       {request.usage_purpose}
                     </p>
                   </div>
@@ -337,17 +347,15 @@ const RequestStatusPage = () => {
                       <div className="text-sm text-green-700">
                         <p className="font-medium mb-1">승인 완료</p>
                         <p>승인일: {formatDate(request.approved_at)}</p>
-                        <p>사용자명: {request.ubuntu_username}</p>
-                        <p>리소스 그룹: {request.node_id}</p>
                       </div>
                     </div>
                   )}
 
-                  {request.status === "DENIED" && request.comment && (
+                  {request.status === "DENIED" && request.admin_comment && (
                     <div className="bg-red-50 border-l-4 border-red-400 p-3 mb-4">
                       <div className="text-sm text-red-700">
                         <p className="font-medium mb-1">거절 사유</p>
-                        <p>{request.comment}</p>
+                        <p>{request.admin_comment}</p>
                       </div>
                     </div>
                   )}
@@ -356,10 +364,7 @@ const RequestStatusPage = () => {
                     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
                       <div className="text-sm text-yellow-700">
                         <p className="font-medium mb-1">승인 대기 중</p>
-                        <p>
-                          관리자 검토가 진행 중입니다. 1-3일 정도 소요될 수
-                          있습니다.
-                        </p>
+                        <p>관리자 검토가 필요합니다.</p>
                       </div>
                     </div>
                   )}
@@ -408,7 +413,91 @@ const RequestStatusPage = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Basic Information */}
+                {/* User Information */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <UserIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                    사용자 정보
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          이름
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.user_name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          이메일
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.user_email}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          학번
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.student_id}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          학과
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.department}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resource Group Information */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                    리소스 그룹 정보
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          리소스 그룹명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.rsgroup_name}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          서버명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.server_name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          설명
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.rsgroup_description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Request Information */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                     <DocumentTextIcon className="w-5 h-5 mr-2 text-[#F68313]" />
@@ -418,63 +507,30 @@ const RequestStatusPage = () => {
                     <div className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-gray-700">
-                          우분투 계정명
+                          Ubuntu 사용자명
                         </p>
                         <p className="text-sm text-gray-900">
                           {selectedRequest.ubuntu_username}
                         </p>
                       </div>
-                      {selectedRequest.ubuntu_gid && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            Ubuntu GID
-                            {selectedRequest.ubuntu_gid.includes(",")
-                              ? "s"
-                              : ""}
-                          </p>
-                          <p className="text-sm text-gray-900">
-                            {selectedRequest.ubuntu_gid}
-                          </p>
-                        </div>
-                      )}
-                      {selectedRequest.ubuntu_uid && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">
-                            Ubuntu UID
-                          </p>
-                          <p className="text-sm text-gray-900">
-                            {selectedRequest.ubuntu_uid}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">
-                          리소스 그룹
-                        </p>
-                        <p className="text-sm text-gray-900">
-                          {selectedRequest.node_id}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">
-                          만료일
-                        </p>
-                        <p className="text-sm text-gray-900">
-                          {new Date(
-                            selectedRequest.expires_at
-                          ).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-gray-700">
                           볼륨 크기
                         </p>
                         <p className="text-sm text-gray-900">
-                          {formatBytes(selectedRequest.volume_size_byte)}
+                          {selectedRequest.volume_size_GB} GiB
                         </p>
                       </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          Ubuntu UID
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {selectedRequest.ubuntu_uid || "설정되지 않음"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
                       <div>
                         <p className="text-sm font-medium text-gray-700">
                           컨테이너 이미지
@@ -484,28 +540,53 @@ const RequestStatusPage = () => {
                           {selectedRequest.image_version}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">
+                          만료일
+                        </p>
+                        <p className="text-sm text-gray-900">
+                          {new Date(
+                            selectedRequest.expires_at
+                          ).toLocaleDateString("ko-KR")}
+                        </p>
+                      </div>
+                      {selectedRequest.ubuntu_gids &&
+                        selectedRequest.ubuntu_gids.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">
+                              Ubuntu GIDs
+                            </p>
+                            <p className="text-sm text-gray-900">
+                              {selectedRequest.ubuntu_gids.join(", ")}
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </div>
                   <div className="mt-4">
                     <p className="text-sm font-medium text-gray-700">
                       사용 목적
                     </p>
-                    <p className="text-sm text-gray-900 mt-1">
+                    <p className="text-sm text-gray-900 mt-1 bg-gray-50 p-3 rounded">
                       {selectedRequest.usage_purpose}
                     </p>
                   </div>
                   {selectedRequest.form_answers &&
                     Object.keys(selectedRequest.form_answers).length > 0 && (
                       <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-medium text-gray-700 mb-2">
                           추가 정보
                         </p>
-                        <div className="text-sm text-gray-900 mt-1 space-y-1">
+                        <div className="bg-gray-50 p-3 rounded space-y-2">
                           {Object.entries(selectedRequest.form_answers).map(
                             ([key, value]) => (
-                              <div key={key}>
-                                <span className="font-medium">{key}:</span>{" "}
-                                {value}
+                              <div key={key} className="flex justify-between">
+                                <span className="text-sm font-medium text-gray-600 capitalize">
+                                  {key.replace("_", " ")}:
+                                </span>
+                                <span className="text-sm text-gray-900">
+                                  {value}
+                                </span>
                               </div>
                             )
                           )}
@@ -521,22 +602,22 @@ const RequestStatusPage = () => {
                       <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
                       서버 접속 정보
                     </h3>
-                    <div className="bg-gray-50 p-4">
+                    <div className="bg-gray-50 p-4 rounded">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm font-medium text-gray-700">
                             사용자명
                           </p>
-                          <code className="block mt-1 p-2 bg-white border text-sm">
+                          <code className="block mt-1 p-2 bg-white border text-sm rounded">
                             {selectedRequest.ubuntu_username}
                           </code>
                         </div>
                         <div>
                           <p className="text-sm font-medium text-gray-700">
-                            리소스 그룹 ID
+                            리소스 그룹
                           </p>
-                          <code className="block mt-1 p-2 bg-white border text-sm">
-                            {selectedRequest.node_id}
+                          <code className="block mt-1 p-2 bg-white border text-sm rounded">
+                            {selectedRequest.rsgroup_name}
                           </code>
                         </div>
                       </div>
@@ -545,7 +626,7 @@ const RequestStatusPage = () => {
                           <p className="text-sm font-medium text-gray-700">
                             컨테이너 이미지
                           </p>
-                          <code className="block mt-1 p-2 bg-white border text-sm">
+                          <code className="block mt-1 p-2 bg-white border text-sm rounded">
                             {selectedRequest.image_name}:
                             {selectedRequest.image_version}
                           </code>
@@ -585,6 +666,16 @@ const RequestStatusPage = () => {
                       </div>
                     )}
                   </div>
+                  {selectedRequest.admin_comment && (
+                    <div className="mt-4 bg-gray-50 p-3 rounded">
+                      <p className="text-sm font-medium text-gray-700">
+                        관리자 의견
+                      </p>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {selectedRequest.admin_comment}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

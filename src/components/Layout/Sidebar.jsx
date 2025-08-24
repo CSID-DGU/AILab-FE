@@ -61,10 +61,10 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 mt-6 overflow-hidden">
+      <nav className="flex-1 mt-6 overflow-y-auto overflow-x-hidden">
         {userRole === "USER" ? (
           // 일반 사용자 메뉴
-          <ul className="space-y-2 px-3">
+          <ul className="space-y-2 px-3 pb-4">
             {userMenuItems.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -97,11 +97,17 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
               <div className="border-t border-gray-600"></div>
             </li>
 
-            {/* 관리자 전용 라벨 */}
-            <li className={`px-3 py-2 ${isCollapsed ? "hidden" : "block"}`}>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                관리자 전용
-              </span>
+            {/* 관리자 전용 라벨 - 다른 메뉴와 동일한 방식으로 처리 */}
+            <li className="px-3 py-2">
+              <div
+                className={`transition-all duration-300 ${
+                  isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                }`}
+              >
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  관리자 전용
+                </span>
+              </div>
             </li>
 
             {/* 관리자 전용 메뉴 (비활성화) */}
@@ -127,7 +133,7 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
           </ul>
         ) : (
           // 관리자 메뉴
-          <ul className="space-y-2 px-3">
+          <ul className="space-y-2 px-3 pb-4">
             {userMenuItems.map((item) => {
               const IconComponent = item.icon;
               return (
@@ -160,11 +166,17 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
               <div className="border-t border-gray-600"></div>
             </li>
 
-            {/* 관리자 전용 라벨 */}
-            <li className={`px-3 py-2 ${isCollapsed ? "hidden" : "block"}`}>
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                관리자 전용
-              </span>
+            {/* 관리자 전용 라벨 - 다른 메뉴와 동일한 방식으로 처리 */}
+            <li className="px-3 py-2">
+              <div
+                className={`transition-all duration-300 ${
+                  isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+                }`}
+              >
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                  관리자 전용
+                </span>
+              </div>
             </li>
 
             {/* 관리자 전용 메뉴 */}
@@ -202,19 +214,15 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
       <div className="p-4 border-t border-gray-700 overflow-hidden">
         <div className="flex items-center">
           <div
-            className={`transition-all duration-300 ${
-              isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            className={`text-xs font-medium whitespace-nowrap transition-all duration-300 ${
+              isCollapsed ? "px-1 py-0.5" : "px-2 py-1"
+            } ${
+              userRole === "ADMIN"
+                ? "bg-red-600 text-white"
+                : "bg-green-600 text-white"
             }`}
           >
-            <div
-              className={`px-2 py-1 text-xs font-medium whitespace-nowrap ${
-                userRole === "ADMIN"
-                  ? "bg-red-600 text-white"
-                  : "bg-green-600 text-white"
-              }`}
-            >
-              {userRole === "ADMIN" ? "관리자" : "사용자"}
-            </div>
+            {userRole === "ADMIN" ? "관리자" : "사용자"}
           </div>
         </div>
       </div>

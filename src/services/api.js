@@ -2,6 +2,9 @@
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://210.94.179.19:9796";
 
+// 세션 이벤트 매니저 import
+import { sessionEventManager } from "./sessionEventManager";
+
 // API 클라이언트 클래스
 class ApiClient {
   constructor(baseURL = API_BASE_URL) {
@@ -51,6 +54,11 @@ class ApiClient {
         } catch {
           // JSON 파싱 실패 시 기본 에러 메시지
           errorData = { message: `HTTP error! status: ${response.status}` };
+        }
+
+        // 401 상태코드인 경우 세션 만료 처리
+        if (response.status === 401) {
+          sessionEventManager.triggerSessionExpired();
         }
 
         throw new Error(

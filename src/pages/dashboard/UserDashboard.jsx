@@ -4,6 +4,7 @@ import Card from "../../components/UI/Card";
 import Button from "../../components/UI/Button";
 import Badge from "../../components/UI/Badge";
 import Alert from "../../components/UI/Alert";
+import { requestService } from "../../services/requestService";
 import {
   ServerIcon,
   ClockIcon,
@@ -17,93 +18,58 @@ import {
 const UserDashboard = ({ user }) => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Mock API call to fetch user dashboard data
     const fetchDashboardData = async () => {
       setLoading(true);
+      setError(null);
 
-      // Mock data - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      try {
+        const response = await requestService.getDashboardServers("ALL");
 
-      const mockData = {
-        totalServers: 2,
-        activeServers: 1,
-        approvedServers: [
-          {
-            request_id: 1,
-            node_id: "LAB1",
-            ubuntu_username: "user123",
-            image_name: "ubuntu",
-            image_version: "20.04",
-            expires_at: "2024-12-31",
-            volume_size_byte: 500000000000, // 500GB
-            cuda_version: "11.8",
-            usage_purpose: "딥러닝 모델 훈련",
-            approved_at: "2024-01-15",
-            status: "FULFILLED",
-            created_at: "2024-01-10",
-            serverInfo: {
-              address: "ailab1.dgu.ac.kr",
-              port: "22001",
-              isActive: true,
-            },
-            nodeInfo: {
-              memory_size_GB: 64,
-              CPU_core_count: 16,
-              gpus: [
-                { gpu_model: "RTX 4090", RAM_GB: 24 },
-                { gpu_model: "RTX 4090", RAM_GB: 24 },
-              ],
-            },
-          },
-          {
-            request_id: 2,
-            node_id: "FARM2",
-            ubuntu_username: "user123_2",
-            image_name: "pytorch",
-            image_version: "1.12",
-            expires_at: "2024-11-30",
-            volume_size_byte: 1000000000000, // 1TB
-            cuda_version: "11.7",
-            usage_purpose: "자연어처리 연구",
-            approved_at: "2024-02-20",
-            status: "FULFILLED",
-            created_at: "2024-02-15",
-            serverInfo: {
-              address: "ailab2.dgu.ac.kr",
-              port: "22002",
-              isActive: false,
-            },
-            nodeInfo: {
-              memory_size_GB: 128,
-              CPU_core_count: 32,
-              gpus: [
-                { gpu_model: "A100", RAM_GB: 80 },
-                { gpu_model: "A100", RAM_GB: 80 },
-                { gpu_model: "A100", RAM_GB: 80 },
-                { gpu_model: "A100", RAM_GB: 80 },
-              ],
-            },
-          },
-        ],
-        pendingRequests: [
-          {
-            request_id: 3,
-            node_id: "LAB3",
-            ubuntu_username: "user123_3",
-            expires_at: "2024-10-31",
-            volume_size_byte: 250000000000, // 250GB
-            cuda_version: "12.0",
-            usage_purpose: "컴퓨터 비전 연구",
-            status: "PENDING",
-            created_at: "2024-08-01",
-          },
-        ],
-      };
+        if (response.status === 200) {
+          // API 응답 구조에 맞춰 데이터 추출
+          const apiData = response.data;
+          const servers = apiData?.data || [];
 
-      setDashboardData(mockData);
-      setLoading(false);
+          // servers가 배열인지 확인
+          if (!Array.isArray(servers)) {
+            setError("서버 데이터 형식이 올바르지 않습니다.");
+            return;
+          }
+
+          // 서버 데이터를 상태별로 분류
+          const approvedServers = servers.filter(
+            (server) =>
+              server.status === "APPROVED" || server.status === "FULFILLED"
+          );
+          const pendingRequests = servers.filter(
+            (server) => server.status === "PENDING"
+          );
+          const activeServers = approvedServers.filter(
+            (server) => server.serverAddress !== null
+          );
+
+          setDashboardData({
+            totalServers: approvedServers.length,
+            activeServers: activeServers.length,
+            approvedServers: approvedServers,
+            pendingRequests: pendingRequests,
+          });
+        } else {
+          setError(
+            "대시보드 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요."
+          );
+        }
+      } catch (error) {
+        console.error("Dashboard data fetch error:", error);
+        setError(
+          "대시보드 정보를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요."
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchDashboardData();
@@ -123,6 +89,7 @@ const UserDashboard = ({ user }) => {
   const getStatusBadge = (status) => {
     switch (status) {
       case "FULFILLED":
+      case "APPROVED":
         return <Badge variant="success">승인완료</Badge>;
       case "PENDING":
         return <Badge variant="warning">승인대기</Badge>;
@@ -133,16 +100,16 @@ const UserDashboard = ({ user }) => {
     }
   };
 
-  const getServerStatusBadge = (isActive) => {
-    return isActive ? (
+  const getServerStatusBadge = (serverAddress) => {
+    return serverAddress ? (
       <Badge variant="success">활성</Badge>
     ) : (
       <Badge variant="danger">비활성</Badge>
     );
   };
 
-  const formatBytes = (bytes) => {
-    return Math.round(bytes / (1024 * 1024 * 1024)) + " GB";
+  const formatBytes = (sizeGiB) => {
+    return sizeGiB + " GB";
   };
 
   const getDaysUntilExpiry = (expiryDate) => {
@@ -165,93 +132,101 @@ const UserDashboard = ({ user }) => {
         </p>
       </div>
 
+      {/* Error Alert */}
+      {error && (
+        <Alert type="error" title="오류">
+          {error}
+        </Alert>
+      )}
+
       {/* Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card title="전체 서버">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <ServerIcon className="w-8 h-8 text-[#F68313] mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.totalServers}
-                </p>
-                <p className="text-sm text-gray-600">승인받은 서버</p>
+      {dashboardData && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card title="전체 서버">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <ServerIcon className="w-8 h-8 text-[#F68313] mr-3" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.totalServers}
+                  </p>
+                  <p className="text-sm text-gray-600">승인받은 서버</p>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card title="활성 서버">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <ComputerDesktopIcon className="w-8 h-8 text-green-500 mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.activeServers}
-                </p>
-                <p className="text-sm text-gray-600">현재 사용 가능</p>
+          <Card title="활성 서버">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <ComputerDesktopIcon className="w-8 h-8 text-green-500 mr-3" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.activeServers}
+                  </p>
+                  <p className="text-sm text-gray-600">현재 사용 가능</p>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        <Card title="대기 중인 신청">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <ClockIcon className="w-8 h-8 text-yellow-500 mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.pendingRequests.length}
-                </p>
-                <p className="text-sm text-gray-600">승인 대기 중</p>
+          <Card title="대기 중인 신청">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <ClockIcon className="w-8 h-8 text-yellow-500 mr-3" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.pendingRequests.length}
+                  </p>
+                  <p className="text-sm text-gray-600">승인 대기 중</p>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      )}
 
       {/* Server Request Alert */}
-      {dashboardData.approvedServers.length === 0 && (
+      {dashboardData && dashboardData.approvedServers.length === 0 && (
         <Alert type="info" title="서버 신청 안내">
           아직 승인된 서버가 없습니다. 새로운 서버를 신청해보세요.
           <div className="mt-3">
-            <Button
-              variant="primary"
-              size="small"
-              className="bg-[#F68313] hover:bg-[#E6750F] border-[#F68313] hover:border-[#E6750F]"
-            >
-              <PlusIcon className="w-4 h-4 mr-1" />
-              서버 신청하기
-            </Button>
+            <Link to="/application">
+              <Button variant="outline" size="small">
+                <PlusIcon className="w-4 h-4 mr-1" />
+                서버 신청하기
+              </Button>
+            </Link>
           </div>
         </Alert>
       )}
 
       {/* Approved Servers */}
-      {dashboardData.approvedServers.length > 0 && (
+      {dashboardData && dashboardData.approvedServers.length > 0 && (
         <Card title="승인받은 서버 목록">
           <div className="space-y-6">
             {dashboardData.approvedServers.map((server) => {
-              const daysLeft = getDaysUntilExpiry(server.expires_at);
+              const daysLeft = getDaysUntilExpiry(server.expiresAt);
               const isExpiringSoon = daysLeft <= 7;
 
               return (
                 <div
-                  key={server.request_id}
+                  key={server.requestId}
                   className="border border-gray-300 p-6"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {server.node_id} - {server.ubuntu_username}
+                        요청 #{server.requestId} - {server.resourceGroupName}
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">
-                        {server.usage_purpose}
+                        {server.containerImage.imageName}{" "}
+                        {server.containerImage.imageVersion}
                       </p>
                     </div>
                     <div className="flex space-x-2">
                       {getStatusBadge(server.status)}
-                      {getServerStatusBadge(server.serverInfo.isActive)}
+                      {getServerStatusBadge(server.serverAddress)}
                     </div>
                   </div>
 
@@ -262,7 +237,7 @@ const UserDashboard = ({ user }) => {
                         서버 주소
                       </p>
                       <p className="text-sm font-mono text-gray-900 mt-1">
-                        {server.serverInfo.address}:{server.serverInfo.port}
+                        {server.serverAddress || "배정 대기 중"}
                       </p>
                     </div>
                     <div className="bg-gray-50 p-3">
@@ -274,7 +249,8 @@ const UserDashboard = ({ user }) => {
                           isExpiringSoon ? "text-red-600" : "text-gray-900"
                         }`}
                       >
-                        {server.expires_at} (D-{daysLeft})
+                        {new Date(server.expiresAt).toLocaleDateString()} (D-
+                        {daysLeft})
                       </p>
                     </div>
                     <div className="bg-gray-50 p-3">
@@ -282,7 +258,7 @@ const UserDashboard = ({ user }) => {
                         볼륨 크기
                       </p>
                       <p className="text-sm font-medium text-gray-900 mt-1">
-                        {formatBytes(server.volume_size_byte)}
+                        {formatBytes(server.volumeSizeGiB)}
                       </p>
                     </div>
                     <div className="bg-gray-50 p-3">
@@ -290,7 +266,7 @@ const UserDashboard = ({ user }) => {
                         CUDA 버전
                       </p>
                       <p className="text-sm font-medium text-gray-900 mt-1">
-                        {server.cuda_version}
+                        {server.containerImage.cudaVersion}
                       </p>
                     </div>
                   </div>
@@ -305,7 +281,7 @@ const UserDashboard = ({ user }) => {
                         </span>
                       </div>
                       <p className="text-sm text-blue-800 mt-1">
-                        {server.nodeInfo.CPU_core_count} 코어
+                        {server.cpuCoreCount} 코어
                       </p>
                     </div>
                     <div className="bg-green-50 p-3">
@@ -316,24 +292,33 @@ const UserDashboard = ({ user }) => {
                         </span>
                       </div>
                       <p className="text-sm text-green-800 mt-1">
-                        {server.nodeInfo.memory_size_GB} GB
+                        {server.memoryGB} GB
                       </p>
                     </div>
                     <div className="bg-purple-50 p-3">
                       <div className="flex items-center">
                         <CpuChipIcon className="w-5 h-5 text-purple-600 mr-2" />
                         <span className="text-sm font-medium text-purple-900">
-                          GPU
+                          리소스 그룹
                         </span>
                       </div>
-                      <div className="text-sm text-purple-800 mt-1">
-                        {server.nodeInfo.gpus.map((gpu, idx) => (
-                          <div key={idx}>
-                            {gpu.gpu_model} ({gpu.RAM_GB}GB)
-                          </div>
-                        ))}
-                      </div>
+                      <p className="text-sm text-purple-800 mt-1">
+                        {server.resourceGroupName}
+                      </p>
                     </div>
+                  </div>
+
+                  {/* Container Image Info */}
+                  <div className="bg-indigo-50 p-3 mb-4">
+                    <div className="flex items-center">
+                      <ServerIcon className="w-5 h-5 text-indigo-600 mr-2" />
+                      <span className="text-sm font-medium text-indigo-900">
+                        컨테이너 이미지
+                      </span>
+                    </div>
+                    <p className="text-sm text-indigo-800 mt-1">
+                      {server.containerImage.description}
+                    </p>
                   </div>
 
                   {/* Warning for expiring servers */}
@@ -348,13 +333,19 @@ const UserDashboard = ({ user }) => {
 
                   {/* Action Buttons */}
                   <div className="flex space-x-3 mt-4">
-                    <Button
-                      variant="outline"
-                      size="small"
-                      className="border-[#F68313] text-[#F68313] hover:bg-[#F68313] hover:text-white"
-                    >
-                      접속 정보 복사
-                    </Button>
+                    {server.serverAddress && (
+                      <Button
+                        variant="outline"
+                        size="small"
+                        className="border-[#F68313] text-[#F68313] hover:bg-[#F68313] hover:text-white"
+                        onClick={() => {
+                          navigator.clipboard.writeText(server.serverAddress);
+                          // TODO: 토스트 메시지 추가
+                        }}
+                      >
+                        접속 정보 복사
+                      </Button>
+                    )}
                     <Button variant="outline" size="small">
                       사용 가이드
                     </Button>
@@ -367,25 +358,32 @@ const UserDashboard = ({ user }) => {
       )}
 
       {/* Pending Requests */}
-      {dashboardData.pendingRequests.length > 0 && (
+      {dashboardData && dashboardData.pendingRequests.length > 0 && (
         <Card title="승인 대기 중인 신청">
           <div className="space-y-4">
             {dashboardData.pendingRequests.map((request) => (
               <div
-                key={request.request_id}
+                key={request.requestId}
                 className="border border-gray-300 p-4 bg-yellow-50"
               >
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-medium text-gray-900">
-                      {request.node_id} - {request.ubuntu_username}
+                      요청 #{request.requestId} - {request.resourceGroupName}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
-                      {request.usage_purpose}
+                      {request.containerImage.imageName}{" "}
+                      {request.containerImage.imageVersion}
                     </p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      신청일: {request.created_at}
-                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-gray-600">
+                      <span>CPU: {request.cpuCoreCount} 코어</span>
+                      <span>메모리: {request.memoryGB} GB</span>
+                      <span>볼륨: {formatBytes(request.volumeSizeGiB)}</span>
+                      <span>
+                        만료일:{" "}
+                        {new Date(request.expiresAt).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(request.status)}
@@ -403,7 +401,7 @@ const UserDashboard = ({ user }) => {
           <Link to="/application">
             <Button
               variant="outline"
-              className="w-full h-16 flex flex-col justify-center border-[#F68313] text-[#F68313] hover:bg-[#F68313] hover:text-white"
+              className="w-full h-16 flex flex-col justify-center"
             >
               <PlusIcon className="w-5 h-5 mb-1" />
               <span className="text-sm">새 서버 신청</span>

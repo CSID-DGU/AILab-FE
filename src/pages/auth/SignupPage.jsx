@@ -115,15 +115,13 @@ const SignupPage = () => {
           message: "인증번호가 이메일로 전송되었습니다. 이메일을 확인해주세요.",
         });
 
-        // 성공 시 인증번호 입력 창으로 포커스 이동을 위해 잠시 후 스크롤
-        setTimeout(() => {
-          const verificationCodeInput = document.querySelector(
-            'input[name="verificationCode"]'
-          );
-          if (verificationCodeInput) {
-            verificationCodeInput.focus();
-          }
-        }, 100);
+        // 성공 시 인증번호 입력 창으로 즉시 포커스 이동
+        const verificationCodeInput = document.querySelector(
+          'input[name="verificationCode"]'
+        );
+        if (verificationCodeInput) {
+          verificationCodeInput.focus();
+        }
       } else {
         throw new Error("인증번호 전송에 실패했습니다.");
       }
@@ -202,13 +200,11 @@ const SignupPage = () => {
       if (response.status === 200) {
         setAlert({
           type: "success",
-          message: "회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.",
+          message: "회원가입이 완료되었습니다.",
         });
 
-        // 2초 후 로그인 페이지로 이동
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 2000);
+        // 즉시 로그인 페이지로 이동
+        window.location.href = "/login";
       } else {
         throw new Error("회원가입에 실패했습니다.");
       }

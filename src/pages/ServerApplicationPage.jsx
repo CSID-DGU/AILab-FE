@@ -479,16 +479,58 @@ const ServerApplicationPage = () => {
       const response = await requestService.createRequest(requestData);
 
       if (response.status === 200) {
+        // 폼 데이터 초기화
+        setFormData({
+          ubuntu_username: "",
+          ubuntu_password: "",
+          rsgroup_id: "",
+          image_id: "",
+          expires_at: "",
+          volume_size_gb: "",
+          usage_purpose: "",
+          ubuntu_gids: [],
+        });
+
+        // 기본 만료일 다시 설정 (3개월 후)
+        const defaultExpiry = new Date();
+        defaultExpiry.setMonth(defaultExpiry.getMonth() + 3);
+        setTimeout(() => {
+          setFormData((prev) => ({
+            ...prev,
+            expires_at: defaultExpiry.toISOString().split("T")[0],
+          }));
+        }, 100);
+
         setAlert({
           type: "success",
           message:
             "서버 신청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요.",
         });
 
-        // 3초 후 대시보드로 이동
+        // 부드럽게 페이지 맨 위로 스크롤 (DashboardLayout의 main 요소를 대상으로)
         setTimeout(() => {
-          navigate("/dashboard");
-        }, 3000);
+          // main 요소 찾기 (DashboardLayout의 overflow-auto가 적용된 요소)
+          const mainElement =
+            document.querySelector("main.overflow-auto") ||
+            document.querySelector("main") ||
+            document.querySelector('[class*="overflow-auto"]');
+
+          if (mainElement) {
+            // main 요소에 스크롤 적용
+            mainElement.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "smooth",
+            });
+          } else {
+            // fallback: window 스크롤
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "smooth",
+            });
+          }
+        }, 100);
       } else {
         setAlert({
           type: "error",
@@ -565,6 +607,31 @@ const ServerApplicationPage = () => {
           new_value: "",
           reason: "",
         });
+
+        // 부드럽게 페이지 맨 위로 스크롤 (DashboardLayout의 main 요소를 대상으로)
+        setTimeout(() => {
+          // main 요소 찾기 (DashboardLayout의 overflow-auto가 적용된 요소)
+          const mainElement =
+            document.querySelector("main.overflow-auto") ||
+            document.querySelector("main") ||
+            document.querySelector('[class*="overflow-auto"]');
+
+          if (mainElement) {
+            // main 요소에 스크롤 적용
+            mainElement.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "smooth",
+            });
+          } else {
+            // fallback: window 스크롤
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "smooth",
+            });
+          }
+        }, 100);
       } else {
         setAlert({
           type: "error",

@@ -76,7 +76,7 @@ export const requestService = {
         throw new Error("인증 토큰이 없습니다.");
       }
 
-      const response = await apiClient.request("/api/users/me/requests", {
+      const response = await apiClient.request("/api/requests/my", {
         method: "GET",
         headers: {
           accept: "application/json;charset=UTF-8",
@@ -110,7 +110,53 @@ export const requestService = {
     }
   },
 
-  // 관리자용 요청 상태 업데이트
+  // 관리자용 요청 승인
+  approveRequest: async (requestData) => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request(`/api/admin/requests/approval`, {
+        method: "PATCH",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json;charset=UTF-8",
+        },
+        body: JSON.stringify(requestData),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "요청 승인에 실패했습니다.");
+    }
+  },
+
+  // 관리자용 요청 거절
+  rejectRequest: async (requestData) => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request(`/api/admin/requests/reject`, {
+        method: "PATCH",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json;charset=UTF-8",
+        },
+        body: JSON.stringify(requestData),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "요청 거절에 실패했습니다.");
+    }
+  },
+
+  // 관리자용 요청 상태 업데이트 (기존 함수 - 호환성 유지)
   updateRequestStatus: async (requestId, status, comment = "") => {
     try {
       const accessToken = authService.getAccessToken();
@@ -201,6 +247,30 @@ export const requestService = {
       return response;
     } catch (error) {
       throw new Error(error.message || "그룹 목록 조회에 실패했습니다.");
+    }
+  },
+
+  // 대시보드 서버 목록 조회
+  getDashboardServers: async (status = "ALL") => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request(
+        `/api/dashboard/me/servers?status=${status}`,
+        {
+          method: "GET",
+          headers: {
+            accept: "application/json;charset=UTF-8",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "대시보드 서버 조회에 실패했습니다.");
     }
   },
 };

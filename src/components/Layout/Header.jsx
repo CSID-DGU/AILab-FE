@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bars3Icon,
   UserCircleIcon,
@@ -8,6 +9,27 @@ import {
 
 const Header = ({ isCollapsed, toggleSidebar, user, onLogout }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+
+  // 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleAccountSettings = () => {
+    navigate("/account");
+    setIsProfileOpen(false);
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6">
@@ -28,7 +50,7 @@ const Header = ({ isCollapsed, toggleSidebar, user, onLogout }) => {
       {/* Right Section */}
       <div className="flex items-center space-x-4">
         {/* User Profile */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
@@ -56,7 +78,10 @@ const Header = ({ isCollapsed, toggleSidebar, user, onLogout }) => {
                 </p>
               </div>
 
-              <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+              <button
+                onClick={handleAccountSettings}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center"
+              >
                 <CogIcon className="w-4 h-4 mr-2" />
                 계정 설정
               </button>
