@@ -19,11 +19,14 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 
 // Admin Pages
 import RequestManagementPage from "./pages/admin/RequestManagementPage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import ResourceMonitoringPage from "./pages/admin/ResourceMonitoringPage";
 
 // Other Pages
 import AccountPage from "./pages/AccountPage";
 import ServerApplicationPage from "./pages/ServerApplicationPage";
 import RequestStatusPage from "./pages/RequestStatusPage";
+import UserResourceMonitoringPage from "./pages/ResourceMonitoringPage";
 
 // Legacy Pages (for reference)
 import HomePage from "./pages/HomePage";
@@ -107,6 +110,17 @@ const AppContent = () => {
         }
       />
 
+      <Route
+        path="/monitoring"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout user={user} onLogout={logout}>
+              <UserResourceMonitoringPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
       {/* Protected Admin Routes */}
       <Route
         path="/admin/dashboard"
@@ -149,12 +163,7 @@ const AppContent = () => {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout user={user} onLogout={logout}>
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  사용자 관리
-                </h2>
-                <p className="text-gray-600 mt-2">개발 중입니다.</p>
-              </div>
+              <UserManagementPage />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -165,12 +174,7 @@ const AppContent = () => {
         element={
           <ProtectedRoute requireAdmin>
             <DashboardLayout user={user} onLogout={logout}>
-              <div className="text-center py-12">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  리소스 모니터링
-                </h2>
-                <p className="text-gray-600 mt-2">개발 중입니다.</p>
-              </div>
+              <ResourceMonitoringPage user={user} />
             </DashboardLayout>
           </ProtectedRoute>
         }

@@ -68,9 +68,16 @@ export const authService = {
   // 로그인
   login: async (email, password) => {
     try {
-      const response = await apiClient.post("/api/auth/login", {
-        email,
-        password,
+      const response = await apiClient.request("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+        skipSessionExpiredCheck: true, // 로그인 요청은 세션 만료 체크 제외
       });
       return response;
     } catch (error) {

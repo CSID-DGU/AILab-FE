@@ -33,6 +33,7 @@ const ServerApplicationPage = () => {
     volume_size_gb: "",
     usage_purpose: "",
     ubuntu_gids: [], // 배열로 변경
+    internal_ports: [], // 개방이 필요한 내부 포트 배열 추가
   });
   const [changeFormData, setChangeFormData] = useState({
     request_id: "",
@@ -44,11 +45,10 @@ const ServerApplicationPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [alert, setAlert] = useState(null);
-  const [resourceGroups, setResourceGroups] = useState([]);
   const [gpuTypes, setGpuTypes] = useState([]); // GPU 타입 목록 (server_name별 분리)
   const [containerImages, setContainerImages] = useState([]);
   const [availableGroups, setAvailableGroups] = useState([]);
-  const [userRequests, setUserRequests] = useState([]); // 사용자의 승인된 요청들
+  const [userRequests] = useState([]); // 사용자의 승인된 요청들 (임시로 빈 배열)
 
   useEffect(() => {
     // API에서 실제 데이터를 가져오는 함수
@@ -133,55 +133,6 @@ const ServerApplicationPage = () => {
           console.warn("Groups API 응답 실패:", groupsResponse.status);
           setAvailableGroups([]);
         }
-
-        // Mock data for other components until APIs are available
-        setResourceGroups([
-          {
-            rsgroup_id: 1,
-            description: "RTX A3000 GPU 그룹",
-            gpu_model: "RTX A3000",
-            ram_gb: 12,
-            nodes_count: 4,
-            available: true,
-          },
-          {
-            rsgroup_id: 2,
-            description: "RTX 3090 GPU 그룹",
-            gpu_model: "RTX 3090",
-            ram_gb: 24,
-            nodes_count: 2,
-            available: true,
-          },
-        ]);
-
-        setUserRequests([
-          {
-            request_id: 1,
-            rsgroup_id: 1,
-            image_id: 1,
-            volume_size_gb: 500,
-            expires_at: "2025-11-10",
-            ubuntu_gids: [1001, 1003],
-            status: "FULFILLED",
-            gpu_model: "RTX A3000",
-            image_name: "pytorch",
-            image_version: "2.0-cuda11.8",
-            group_names: ["default", "students"],
-          },
-          {
-            request_id: 2,
-            rsgroup_id: 2,
-            image_id: 2,
-            volume_size_gb: 1000,
-            expires_at: "2025-12-15",
-            ubuntu_gids: [1002],
-            status: "FULFILLED",
-            gpu_model: "RTX 3090",
-            image_name: "tensorflow",
-            image_version: "2.13-cuda11.8",
-            group_names: ["researchers"],
-          },
-        ]);
 
         // Set default expiry date (3 months from now)
         const defaultExpiry = new Date();
@@ -290,6 +241,27 @@ const ServerApplicationPage = () => {
     }
   };
 
+  // 포트 추가 핸들러
+  const addPort = (port) => {
+    const portNumber = parseInt(port);
+    if (portNumber && portNumber > 0 && portNumber <= 65535) {
+      if (!formData.internal_ports.includes(portNumber)) {
+        setFormData((prev) => ({
+          ...prev,
+          internal_ports: [...prev.internal_ports, portNumber],
+        }));
+      }
+    }
+  };
+
+  // 포트 제거 핸들러
+  const removePort = (port) => {
+    setFormData((prev) => ({
+      ...prev,
+      internal_ports: prev.internal_ports.filter((p) => p !== port),
+    }));
+  };
+
   // 그룹 선택 UI 컴포넌트
   const GroupSelector = ({ selectedGroups }) => {
     const getGroupName = (gid) => {
@@ -352,6 +324,90 @@ const ServerApplicationPage = () => {
           {selectedGroups.length > 0
             ? `${selectedGroups.length}개 그룹이 선택됨. 뱃지의 X 버튼을 클릭하여 제거할 수 있습니다.`
             : "필요한 경우 하나 이상의 그룹을 선택할 수 있습니다."}
+        </p>
+      </div>
+    );
+  };
+
+  // 포트 선택 UI 컴포넌트
+  const PortSelector = ({ selectedPorts }) => {
+    const [newPortInput, setNewPortInput] = useState("");
+
+    const handleAddPort = () => {
+      const port = parseInt(newPortInput);
+      if (port && port > 0 && port <= 65535) {
+        addPort(port);
+        setNewPortInput("");
+      }
+    };
+
+    const handleKeyPress = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddPort();
+      }
+    };
+
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <ServerIcon className="w-4 h-4 inline mr-1" />
+          개방이 필요한 내부 포트 (선택사항)
+        </label>
+
+        {/* 선택된 포트들 표시 */}
+        {selectedPorts.length > 0 && (
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-2">
+              {selectedPorts.map((port) => (
+                <span
+                  key={port}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                >
+                  포트 {port}
+                  <button
+                    type="button"
+                    onClick={() => removePort(port)}
+                    className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-blue-200 focus:outline-none"
+                  >
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 포트 입력 */}
+        <div className="flex gap-2">
+          <input
+            type="number"
+            value={newPortInput}
+            onChange={(e) => setNewPortInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="포트 번호 (1-65535)"
+            min="1"
+            max="65535"
+            className="flex-1 px-3 py-2 border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:border-[#F68313]"
+          />
+          <button
+            type="button"
+            onClick={handleAddPort}
+            disabled={
+              !newPortInput ||
+              parseInt(newPortInput) <= 0 ||
+              parseInt(newPortInput) > 65535
+            }
+            className="px-4 py-2 bg-[#F68313] text-white text-sm font-medium rounded hover:bg-[#E6750F] focus:outline-none focus:ring-2 focus:ring-[#F68313] focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            추가
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 mt-1">
+          {selectedPorts.length > 0
+            ? `${selectedPorts.length}개 포트가 선택됨. 웹 서비스나 API 서버 등에 필요한 포트를 추가하세요.`
+            : "외부에서 접근이 필요한 포트 번호를 입력하세요. 예: 8080, 3000, 5000 등"}
         </p>
       </div>
     );
@@ -460,17 +516,23 @@ const ServerApplicationPage = () => {
     setAlert(null);
 
     try {
+      // 우분투 패스워드 Base64 인코딩
+      const encodeBase64 = (str) => {
+        return window.btoa(unescape(encodeURIComponent(str)));
+      };
+
       // API 요청 데이터 구성 (curl 명령어와 일치)
       const requestData = {
         resourceGroupId: parseInt(formData.rsgroup_id),
         imageId: parseInt(formData.image_id),
         ubuntuUsername: formData.ubuntu_username,
-        ubuntuPassword: formData.ubuntu_password,
+        ubuntuPassword: encodeBase64(formData.ubuntu_password),
         volumeSizeGiB: parseInt(formData.volume_size_gb),
         usagePurpose: formData.usage_purpose,
         formAnswers: {}, // 필요에 따라 추가 정보를 채울 수 있습니다
         expiresAt: new Date(formData.expires_at).toISOString(),
         ubuntuGids: formData.ubuntu_gids,
+        internalPorts: formData.internal_ports, // 내부 포트 배열 추가
       };
 
       console.log("Request data:", requestData);
@@ -489,6 +551,7 @@ const ServerApplicationPage = () => {
           volume_size_gb: "",
           usage_purpose: "",
           ubuntu_gids: [],
+          internal_ports: [], // 포트 배열도 초기화
         });
 
         // 기본 만료일 다시 설정 (3개월 후)
@@ -703,10 +766,9 @@ const ServerApplicationPage = () => {
               required
             >
               <option value="">GPU 기종을 선택하세요</option>
-              {resourceGroups.map((group) => (
-                <option key={group.rsgroup_id} value={group.rsgroup_id}>
-                  {group.gpu_model} ({group.ram_gb}GB, {group.nodes_count}개
-                  노드)
+              {gpuTypes.map((gpu) => (
+                <option key={gpu.rsgroupId} value={gpu.rsgroupId}>
+                  {gpu.gpuModel} ({gpu.ramGb}GB, 노드 {gpu.nodeId})
                 </option>
               ))}
             </select>
@@ -1246,6 +1308,9 @@ const ServerApplicationPage = () => {
 
                 {/* Optional Group Selection */}
                 <GroupSelector selectedGroups={formData.ubuntu_gids} />
+
+                {/* Optional Port Selection */}
+                <PortSelector selectedPorts={formData.internal_ports} />
               </div>
             </div>{" "}
             {/* Usage Information Section */}

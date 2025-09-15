@@ -97,7 +97,7 @@ export const requestService = {
         throw new Error("인증 토큰이 없습니다.");
       }
 
-      const response = await apiClient.request("/api/admin/requests", {
+      const response = await apiClient.request("/api/admin/requests/new", {
         method: "GET",
         headers: {
           accept: "application/json;charset=UTF-8",

@@ -1,6 +1,6 @@
 // API 기본 설정
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://210.94.179.19:9796";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
 // 세션 이벤트 매니저 import
 import { sessionEventManager } from "./sessionEventManager";
@@ -23,8 +23,15 @@ class ApiClient {
       ...options,
     };
 
+    console.log("API 요청 정보:");
+    console.log("URL:", url);
+    console.log("Config:", config);
+
     try {
       const response = await fetch(url, config);
+
+      console.log("API 응답 상태:", response.status);
+      console.log("API 응답 헤더:", response.headers);
 
       // 응답이 성공적이라면 status와 함께 반환
       if (response.ok) {
@@ -41,6 +48,8 @@ class ApiClient {
           }
         }
 
+        console.log("API 응답 데이터:", data);
+
         return {
           status: response.status,
           data,
@@ -56,8 +65,10 @@ class ApiClient {
           errorData = { message: `HTTP error! status: ${response.status}` };
         }
 
-        // 401 상태코드인 경우 세션 만료 처리
-        if (response.status === 401) {
+        console.error("API 에러 응답:", errorData);
+
+        // 401 상태코드인 경우 세션 만료 처리 (로그인 요청은 제외)
+        if (response.status === 401 && !options.skipSessionExpiredCheck) {
           sessionEventManager.triggerSessionExpired();
         }
 

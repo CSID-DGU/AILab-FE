@@ -21,6 +21,7 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
     { name: "대시보드", href: "/dashboard", icon: HomeIcon },
     { name: "서버 신청", href: "/application", icon: ServerIcon },
     { name: "신청 현황", href: "/requests", icon: ClipboardDocumentListIcon },
+    { name: "리소스 모니터링", href: "/monitoring", icon: ChartBarIcon },
     { name: "계정 설정", href: "/account", icon: UserIcon },
   ];
 
