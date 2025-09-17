@@ -35,7 +35,7 @@ const RequestStatusPage = () => {
 
         if (response.status === 200) {
           // API 응답 데이터를 기존 UI에 맞게 변환
-          const transformedRequests = response.data.map((request) => ({
+          const transformedRequests = response.data.data.map((request) => ({
             request_id: request.requestId,
             user_id: request.user.userId,
             user_name: request.user.name,

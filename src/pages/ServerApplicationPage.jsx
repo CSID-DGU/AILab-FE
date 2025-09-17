@@ -32,7 +32,8 @@ const ServerApplicationPage = () => {
   const [gpuTypes, setGpuTypes] = useState([]);
   const [containerImages, setContainerImages] = useState([]);
   const [availableGroups, setAvailableGroups] = useState([]);
-  const [userRequests] = useState([]);
+  const [userRequests, setUserRequests] = useState([]);
+  const [approvedRequests, setApprovedRequests] = useState([]);
 
   const updateAvailableGroups = (newGroups) => {
     setAvailableGroups(newGroups);
@@ -69,11 +70,12 @@ const ServerApplicationPage = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [gpuTypesResponse, imagesResponse, groupsResponse] =
+        const [gpuTypesResponse, imagesResponse, groupsResponse, approvedResponse] =
           await Promise.all([
             requestService.getGpuTypes(),
             requestService.getContainerImages(),
             requestService.getGroups(),
+            requestService.getApprovedRequests(),
           ]);
 
         if (gpuTypesResponse.status === 200) {
@@ -124,6 +126,32 @@ const ServerApplicationPage = () => {
           }
         } else {
           setAvailableGroups([]);
+        }
+
+        if (approvedResponse.status === 200) {
+          const approvedData = approvedResponse.data?.data || approvedResponse.data;
+          if (Array.isArray(approvedData)) {
+            // API 응답 데이터를 UI에서 사용할 형태로 변환
+            const processedApprovedRequests = approvedData.map((request) => ({
+              request_id: request.requestId,
+              gpu_model: request.resourceGroup?.resourceGroupName || "Unknown GPU",
+              image_name: request.imageName,
+              image_version: request.imageVersion,
+              volume_size_gb: request.volumeSizeGiB,
+              expires_at: request.expiresAt ? request.expiresAt.split('T')[0] : 'N/A',
+              group_names: request.ubuntuGids || [],
+              usage_purpose: request.usagePurpose,
+              status: request.status,
+              server_name: request.resourceGroup?.serverName || 'Unknown Server',
+              ubuntu_username: request.ubuntuUsername,
+              port_mappings: request.portMappings || []
+            }));
+            setApprovedRequests(processedApprovedRequests);
+          } else {
+            setApprovedRequests([]);
+          }
+        } else {
+          setApprovedRequests([]);
         }
 
         const defaultExpiry = new Date();
@@ -234,7 +262,7 @@ const ServerApplicationPage = () => {
           gpuTypes={gpuTypes}
           containerImages={containerImages}
           availableGroups={availableGroups}
-          userRequests={userRequests}
+          userRequests={approvedRequests}
           onUpdateAvailableGroups={updateAvailableGroups}
           onSuccess={handleSuccess}
         />

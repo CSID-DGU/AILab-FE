@@ -152,6 +152,36 @@ const ChangeRequestForm = ({
     }));
   };
 
+  // 선택된 서버의 현재 값을 가져오는 함수
+  const getSelectedRequestCurrentValue = (changeType) => {
+    const selectedRequest = userRequests.find(
+      (req) => req.request_id === parseInt(changeFormData.request_id)
+    );
+    
+    if (!selectedRequest) return null;
+
+    switch (changeType) {
+      case "VOLUME_SIZE":
+        return selectedRequest.volume_size_gb;
+      case "EXPIRES_AT":
+        return selectedRequest.expires_at;
+      case "RSGROUP_ID":
+        return selectedRequest.gpu_model;
+      case "IMAGE_ID":
+        return `${selectedRequest.image_name} ${selectedRequest.image_version}`;
+      case "GROUPS":
+        return selectedRequest.group_names.length > 0 
+          ? selectedRequest.group_names.join(", ") 
+          : "설정된 그룹 없음";
+      case "INTERNAL_PORTS":
+        return selectedRequest.port_mappings.length > 0 
+          ? selectedRequest.port_mappings.map(port => port.internalPort).join(", ")
+          : "설정된 포트 없음";
+      default:
+        return null;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -164,36 +194,48 @@ const ChangeRequestForm = ({
     setIsLoading(true);
 
     try {
-      // Get old value for comparison
-      const selectedRequest = userRequests.find(
-        (req) => req.request_id === parseInt(changeFormData.request_id)
-      );
+      // API 명세에 맞게 changeType 매핑
+      const changeTypeMapping = {
+        "VOLUME_SIZE": "VOLUME_SIZE",
+        "EXPIRES_AT": "EXPIRES_AT", 
+        "RSGROUP_ID": "RSGROUP_ID",
+        "IMAGE_ID": "IMAGE_ID",
+        "GROUPS": "GROUP",
+        "INTERNAL_PORTS": "PORT"
+      };
 
-      let oldValue = "";
-      if (changeFormData.change_type === "VOLUME_SIZE") {
-        oldValue = selectedRequest.volume_size_gb;
-      } else if (changeFormData.change_type === "EXPIRES_AT") {
-        oldValue = selectedRequest.expires_at;
-      } else if (changeFormData.change_type === "RSGROUP_ID") {
-        oldValue = selectedRequest.rsgroup_id;
-      } else if (changeFormData.change_type === "IMAGE_ID") {
-        oldValue = selectedRequest.image_id;
+      // newValue 형식 처리
+      let formattedNewValue = changeFormData.new_value;
+      
+      // PORT나 GROUP 타입인 경우 JSON string으로 변환
+      if (changeFormData.change_type === "INTERNAL_PORTS") {
+        // 포트 배열을 API 명세에 맞는 형식으로 변환
+        const ports = JSON.parse(changeFormData.new_value || "[]");
+        const formattedPorts = ports.map(port => ({
+          internalPort: parseInt(port.internalPort),
+          usagePurpose: port.usagePurpose
+        }));
+        formattedNewValue = JSON.stringify(formattedPorts);
       } else if (changeFormData.change_type === "GROUPS") {
-        oldValue = JSON.stringify(selectedRequest.ubuntu_gids);
+        // 그룹 배열을 정수 배열로 변환하여 JSON string으로
+        const groups = JSON.parse(changeFormData.new_value || "[]");
+        const formattedGroups = groups.map(group => parseInt(group));
+        formattedNewValue = JSON.stringify(formattedGroups);
       }
 
       // Create change request data
       const changeRequestData = {
-        request_id: parseInt(changeFormData.request_id),
-        change_type: changeFormData.change_type,
-        old_value: oldValue,
-        new_value: changeFormData.new_value,
+        changeType: changeTypeMapping[changeFormData.change_type],
+        newValue: formattedNewValue,
         reason: changeFormData.reason,
       };
 
       console.log("Change request data:", changeRequestData);
 
-      const response = await requestService.createChangeRequest(changeRequestData);
+      const response = await requestService.createChangeRequest(
+        parseInt(changeFormData.request_id),
+        changeRequestData
+      );
 
       if (response.status === 200) {
         onSuccess(
@@ -216,6 +258,27 @@ const ChangeRequestForm = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // GPU 타입들을 그룹화하는 함수
+  const groupGpuTypes = () => {
+    const grouped = {};
+    
+    gpuTypes.forEach((gpu) => {
+      const key = `${gpu.gpuModel}_${gpu.ramGb}GB`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          gpuModel: gpu.gpuModel,
+          ramGb: gpu.ramGb,
+          nodes: [],
+          rsgroupIds: []
+        };
+      }
+      grouped[key].nodes.push(gpu.nodeId);
+      grouped[key].rsgroupIds.push(gpu.rsgroupId);
+    });
+
+    return Object.values(grouped);
   };
 
   const getNewValueInput = () => {
@@ -272,9 +335,9 @@ const ChangeRequestForm = ({
               required
             >
               <option value="">GPU 기종을 선택하세요</option>
-              {gpuTypes.map((gpu) => (
-                <option key={gpu.rsgroupId} value={gpu.rsgroupId}>
-                  {gpu.gpuModel} ({gpu.ramGb}GB, 노드 {gpu.nodeId})
+              {groupGpuTypes().map((group, index) => (
+                <option key={index} value={group.rsgroupIds[0]}>
+                  {group.gpuModel} ({group.ramGb}GB, 가용 노드 {group.nodes.join(", ")})
                 </option>
               ))}
             </select>
@@ -454,9 +517,8 @@ const ChangeRequestForm = ({
               <option value="">변경할 서버를 선택하세요</option>
               {userRequests.map((request) => (
                 <option key={request.request_id} value={request.request_id}>
-                  {request.gpu_model} - {request.image_name} {request.image_version} (
-                  {request.volume_size_gb}GB, 만료: {request.expires_at}, 그룹:{" "}
-                  {request.group_names.join(", ") || "없음"})
+                  {request.server_name} - {request.gpu_model} ({request.image_name} {request.image_version}) - {request.ubuntu_username} (
+                  {request.volume_size_gb}GB, 만료: {request.expires_at})
                 </option>
               ))}
             </select>
@@ -506,6 +568,16 @@ const ChangeRequestForm = ({
                 <p className="text-sm text-red-600">{errors.change_type}</p>
               )}
             </div>
+
+            {/* 현재 값 표시 */}
+            {changeFormData.request_id && changeFormData.change_type && (
+              <div className="bg-blue-50 border border-blue-200 p-4">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">현재 설정값</h4>
+                <p className="text-sm text-blue-800">
+                  {getSelectedRequestCurrentValue(changeFormData.change_type)}
+                </p>
+              </div>
+            )}
 
             {/* Dynamic input based on change type */}
             {changeFormData.change_type && <div>{getNewValueInput()}</div>}

@@ -186,14 +186,14 @@ export const requestService = {
   },
 
   // 요청 변경 신청
-  createChangeRequest: async (changeRequestData) => {
+  createChangeRequest: async (requestId, changeRequestData) => {
     try {
       const accessToken = authService.getAccessToken();
       if (!accessToken) {
         throw new Error("인증 토큰이 없습니다.");
       }
 
-      const response = await apiClient.request("/api/change-requests", {
+      const response = await apiClient.request(`/api/requests/${requestId}/change`, {
         method: "POST",
         headers: {
           accept: "application/json;charset=UTF-8",
@@ -296,6 +296,27 @@ export const requestService = {
       return response;
     } catch (error) {
       throw new Error(error.message || "대시보드 서버 조회에 실패했습니다.");
+    }
+  },
+
+  // 승인된 서버 목록 조회
+  getApprovedRequests: async () => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request("/api/requests/my/approved", {
+        method: "GET",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "승인된 서버 목록 조회에 실패했습니다.");
     }
   },
 };
