@@ -33,7 +33,9 @@ const RequestManagementPage = () => {
 
         if (response.status === 200) {
           // API 응답 데이터를 기존 UI에 맞게 변환
-          const transformedRequests = response.data.map((request) => ({
+          // response.data는 서버 응답이고, response.data.data가 실제 배열
+          const requestsArray = response.data.data || [];
+          const transformedRequests = requestsArray.map((request) => ({
             request_id: request.requestId,
             user_id: request.user.userId,
             user_name: request.user.name,
@@ -61,6 +63,7 @@ const RequestManagementPage = () => {
             approved_at: request.approvedAt,
             created_at: request.createdAt,
             updated_at: request.updatedAt,
+            port_mappings: request.portMappings || [],
           }));
 
           setRequests(transformedRequests);
@@ -145,7 +148,6 @@ const RequestManagementPage = () => {
           imageId: request.image_id,
           resourceGroupId: request.rsgroup_id,
           volumeSizeGiB: request.volume_size_GB,
-          expiresAt: request.expires_at,
           adminComment: comment,
         };
         response = await requestService.approveRequest(approvalData);
@@ -168,12 +170,18 @@ const RequestManagementPage = () => {
       if (response.status === 200) {
         // API 응답으로 받은 업데이트된 데이터로 state 업데이트
         const updatedRequest = response.data;
+        
+        // 승인/거절 API의 경우 newStatus를 기반으로 상태 설정
+        const finalStatus = (newStatus === "FULFILLED" || newStatus === "DENIED") 
+          ? newStatus 
+          : updatedRequest.status;
+        
         setRequests((prev) =>
           prev.map((req) =>
             req.request_id === request.request_id
               ? {
                   ...req,
-                  status: updatedRequest.status,
+                  status: finalStatus,
                   admin_comment: updatedRequest.comment,
                   updated_at: updatedRequest.updatedAt,
                   approved_at: updatedRequest.approvedAt,
@@ -407,6 +415,31 @@ const RequestManagementPage = () => {
                       </p>
                     </div>
                   </div>
+
+                  {/* Port Mappings */}
+                  {request.port_mappings && request.port_mappings.length > 0 && (
+                    <div className="mt-3 pt-3 mb-4 border-t border-gray-100">
+                      <p className="text-xs font-medium text-gray-700 uppercase tracking-tight mb-2">
+                        포트 매핑
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {request.port_mappings.map((port, index) => (
+                          <span
+                            key={index}
+                            className={`inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-medium text-center ${
+                              port.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {port.externalPort}:{port.internalPort}
+                            {port.usagePurpose && ` (${port.usagePurpose})`}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 border-b border-gray-100"></div>
+                    </div>
+                  )}
 
                   <div className="mb-4">
                     <p className="text-xs font-medium text-gray-700 uppercase tracking-tight mb-1">
@@ -743,6 +776,62 @@ const RequestManagementPage = () => {
                       </div>
                     )}
                 </div>
+
+                {/* Port Mappings Information */}
+                {selectedRequest.port_mappings && selectedRequest.port_mappings.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                      <ServerIcon className="w-5 h-5 mr-2 text-[#F68313]" />
+                      포트 매핑 정보
+                    </h3>
+                    <div className="bg-gray-50 p-4">
+                      <div className="space-y-3">
+                        {selectedRequest.port_mappings.map((port, index) => (
+                          <div key={index} className="bg-white p-3 border border-gray-300">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 text-center">
+                                  외부 포트
+                                </p>
+                                <code className="block mt-1 p-1 bg-gray-100 text-sm text-center">
+                                  {port.externalPort}
+                                </code>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 text-center">
+                                  내부 포트
+                                </p>
+                                <code className="block mt-1 p-1 bg-gray-100 text-sm text-center">
+                                  {port.internalPort}
+                                </code>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 text-center">
+                                  상태
+                                </p>
+                                <span className={`inline-flex items-center justify-center w-full px-2 py-1 text-xs font-medium mt-1 text-center ${
+                                  port.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}>
+                                  {port.isActive ? "활성" : "비활성"}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-700 text-center">
+                                  사용 목적
+                                </p>
+                                <p className="text-sm text-gray-900 mt-1 text-center">
+                                  {port.usagePurpose || "지정되지 않음"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Status History */}
                 <div>

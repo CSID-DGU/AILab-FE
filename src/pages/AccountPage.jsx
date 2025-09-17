@@ -140,7 +140,7 @@ const AccountPage = ({ user }) => {
     } catch {
       setAlert({
         type: "error",
-        message: "휴대폰 번호 업데이트에 실패했습니다. 다시 시도해주세요.",
+        message: "휴대폰 번호 업데이트에 실패했습니다. 휴대폰 번호 입력 형식에 맞지 않습니다.",
       });
     } finally {
       setIsLoading(false);
