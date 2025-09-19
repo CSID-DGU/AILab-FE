@@ -110,7 +110,7 @@ const LoginPage = ({ onLogin }) => {
                 )}
 
                 <Input
-                  label="이메일"
+                  label="이메일 (E-mail)"
                   name="email"
                   type="email"
                   value={formData.email}
@@ -121,7 +121,7 @@ const LoginPage = ({ onLogin }) => {
                 />
 
                 <Input
-                  label="비밀번호"
+                  label="비밀번호 (Password)"
                   name="password"
                   type="password"
                   value={formData.password}
@@ -135,9 +135,9 @@ const LoginPage = ({ onLogin }) => {
                   <div className="text-sm">
                     <Link
                       to="/forgot-password"
-                      className="font-medium text-[#F68313] hover:text-[#E6750F]"
+                      className="font-medium text-[#F68313] hover:text-[#E6750F] tracking-tight"
                     >
-                      비밀번호를 잊으셨나요?
+                      비밀번호를 잊으셨나요? (Forgot Password?)
                     </Link>
                   </div>
                 </div>
@@ -171,18 +171,19 @@ const LoginPage = ({ onLogin }) => {
                       to="/signup"
                       className="font-medium text-[#F68313] hover:text-[#E6750F]"
                     >
-                      회원가입
+                      회원가입 (Sign Up)
                     </Link>
                   </p>
                 </div>
               </div>
 
               {/* Additional Info */}
-              <div className="mt-8 text-center text-xs text-gray-500">
+              <div className="mt-8 text-center text-xs text-gray-500 tracking-tight">
                 <p>dgu.ac.kr 또는 dongguk.edu 이메일로만 로그인 가능합니다.</p>
                 <p className="mt-1">
                   관리자 권한이 필요한 경우 담당자에게 문의하세요.
                 </p>
+                <p className="mt-1">You can only login with dgu.ac.kr or dongguk.edu email addresses.</p>
               </div>
             </div>
           </div>

@@ -288,7 +288,7 @@ const SignupPage = () => {
               {step === 1 ? (
                 <form className="space-y-6" onSubmit={handleSendVerification}>
                   <Input
-                    label="이메일"
+                    label="이메일 (E-mail)"
                     name="email"
                     type="email"
                     value={formData.email}
@@ -302,7 +302,7 @@ const SignupPage = () => {
 
                   {emailVerified && (
                     <Input
-                      label="인증번호"
+                      label="인증번호 (Verification Code)"
                       name="verificationCode"
                       type="text"
                       value={formData.verificationCode}
@@ -345,7 +345,7 @@ const SignupPage = () => {
                 <form className="space-y-6" onSubmit={handleSignup}>
                   <div className="grid grid-cols-1 gap-6">
                     <Input
-                      label="이메일"
+                      label="이메일 (E-mail)"
                       name="email"
                       type="email"
                       value={formData.email}
@@ -354,7 +354,7 @@ const SignupPage = () => {
                     />
 
                     <Input
-                      label="비밀번호"
+                      label="비밀번호 (Password)"
                       name="password"
                       type="password"
                       value={formData.password}
@@ -365,7 +365,7 @@ const SignupPage = () => {
                     />
 
                     <Input
-                      label="비밀번호 확인"
+                      label="비밀번호 확인 (Confirm Password)"
                       name="confirmPassword"
                       type="password"
                       value={formData.confirmPassword}
@@ -374,20 +374,23 @@ const SignupPage = () => {
                       placeholder="비밀번호를 다시 입력하세요"
                       required
                     />
-
+                    <div>
                     <Input
-                      label="이름"
+                      label="이름 (Name)"
                       name="name"
                       type="text"
                       value={formData.name}
                       onChange={handleChange}
                       error={errors.name}
-                      placeholder="실명을 입력하세요"
+                      placeholder="Slack 실명과 동일하게 입력하세요"
                       required
                     />
+                    <p className="text-xs tracking-tight text-red-500 mt-2">This field must be identical string as your Slack display name. Unless you cannot receive the notification from Slack.</p>
+                    <p className="text-xs tracking-tight text-red-500 mt-1">"김동국"이나 "김동국 관리자"처럼 Slack 닉네임과 동일하게 입력해야 합니다.</p>
+                    </div>
 
                     <Input
-                      label="학과"
+                      label="학과 (Department)"
                       name="department"
                       type="text"
                       value={formData.department}
@@ -398,7 +401,7 @@ const SignupPage = () => {
                     />
 
                     <Input
-                      label="학번"
+                      label="학번 (Student ID)"
                       name="studentId"
                       type="text"
                       value={formData.studentId}
@@ -409,7 +412,7 @@ const SignupPage = () => {
                     />
 
                     <Input
-                      label="전화번호"
+                      label="전화번호 (Phone Number)"
                       name="phone"
                       type="tel"
                       value={formData.phone}
