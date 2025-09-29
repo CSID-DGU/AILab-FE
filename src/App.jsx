@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 
 // Admin Pages
 import RequestManagementPage from "./pages/admin/RequestManagementPage";
+import ChangeRequestManagementPage from "./pages/admin/ChangeRequestManagementPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ResourceMonitoringPage from "./pages/admin/ResourceMonitoringPage";
 
@@ -26,6 +27,7 @@ import ResourceMonitoringPage from "./pages/admin/ResourceMonitoringPage";
 import AccountPage from "./pages/AccountPage";
 import ServerApplicationPage from "./pages/ServerApplicationPage";
 import RequestStatusPage from "./pages/RequestStatusPage";
+import MyChangeRequestsPage from "./pages/MyChangeRequestsPage";
 import UserResourceMonitoringPage from "./pages/ResourceMonitoringPage";
 
 // Legacy Pages (for reference)
@@ -100,6 +102,17 @@ const AppContent = () => {
       />
 
       <Route
+        path="/my-change-requests"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout user={user} onLogout={logout}>
+              <MyChangeRequestsPage user={user} />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/account"
         element={
           <ProtectedRoute>
@@ -139,6 +152,17 @@ const AppContent = () => {
           <ProtectedRoute requireAdmin>
             <DashboardLayout user={user} onLogout={logout}>
               <RequestManagementPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/change-request-management"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout user={user} onLogout={logout}>
+              <ChangeRequestManagementPage />
             </DashboardLayout>
           </ProtectedRoute>
         }

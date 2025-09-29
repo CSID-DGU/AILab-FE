@@ -198,7 +198,7 @@ const ChangeRequestForm = ({
       const changeTypeMapping = {
         "VOLUME_SIZE": "VOLUME_SIZE",
         "EXPIRES_AT": "EXPIRES_AT", 
-        "RSGROUP_ID": "RSGROUP_ID",
+        "RSGROUP_ID": "RESOURCE_GROUP",
         "IMAGE_ID": "IMAGE_ID",
         "GROUPS": "GROUP",
         "INTERNAL_PORTS": "PORT"

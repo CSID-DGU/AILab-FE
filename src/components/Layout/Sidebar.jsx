@@ -8,6 +8,7 @@ import {
   CogIcon,
   UsersIcon,
   ClipboardDocumentListIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 
 const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
@@ -21,6 +22,7 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
     { name: "대시보드", href: "/dashboard", icon: HomeIcon },
     { name: "서버 신청", href: "/application", icon: ServerIcon },
     { name: "신청 현황", href: "/requests", icon: ClipboardDocumentListIcon },
+    { name: "변경 요청 현황", href: "/my-change-requests", icon: ArrowsRightLeftIcon },
     { name: "리소스 모니터링", href: "/monitoring", icon: ChartBarIcon },
     { name: "계정 설정", href: "/account", icon: UserIcon },
   ];
@@ -30,6 +32,11 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
       name: "신청서 관리",
       href: "/admin/request-management",
       icon: DocumentTextIcon,
+    },
+    { 
+      name: "변경 요청 관리", 
+      href: "/admin/change-request-management", 
+      icon: ArrowsRightLeftIcon 
     },
     { name: "사용자 관리", href: "/admin/users", icon: UsersIcon },
     { name: "리소스 모니터링", href: "/admin/monitoring", icon: ChartBarIcon },

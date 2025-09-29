@@ -208,6 +208,100 @@ export const requestService = {
     }
   },
 
+  // 모든 변경 요청 목록 조회 (관리자용)
+  getChangeRequests: async () => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request("/api/admin/requests/change/all", {
+        method: "GET",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "변경 요청 목록 조회에 실패했습니다.");
+    }
+  },
+
+  // 변경 요청 승인 (관리자용)
+  approveChangeRequest: async (changeRequestId, adminComment) => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request("/api/admin/requests/change/approve", {
+        method: "PATCH",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json;charset=UTF-8",
+        },
+        body: JSON.stringify({
+          changeRequestId: changeRequestId,
+          adminComment: adminComment,
+        }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "변경 요청 승인에 실패했습니다.");
+    }
+  },
+
+  // 변경 요청 거절 (관리자용)
+  rejectChangeRequest: async (changeRequestId, adminComment) => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request("/api/admin/requests/change/reject", {
+        method: "PATCH",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json;charset=UTF-8",
+        },
+        body: JSON.stringify({
+          changeRequestId: changeRequestId,
+          adminComment: adminComment,
+        }),
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "변경 요청 거절에 실패했습니다.");
+    }
+  },
+
+  // 내 변경 요청 목록 조회 (사용자용)
+  getMyChangeRequests: async () => {
+    try {
+      const accessToken = authService.getAccessToken();
+      if (!accessToken) {
+        throw new Error("인증 토큰이 없습니다.");
+      }
+
+      const response = await apiClient.request("/api/requests/my/changes", {
+        method: "GET",
+        headers: {
+          accept: "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      throw new Error(error.message || "변경 요청 목록 조회에 실패했습니다.");
+    }
+  },
+
   // GPU 타입 목록 조회 (server_name별로 분리된 리소스 목록)
   getGpuTypes: async () => {
     try {
