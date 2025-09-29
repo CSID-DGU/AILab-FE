@@ -13,15 +13,12 @@ import DashboardLayout from "./components/Layout/DashboardLayout";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 
-// Dashboard Pages
-import UserDashboard from "./pages/dashboard/UserDashboard";
-import AdminDashboard from "./pages/dashboard/AdminDashboard";
-
 // Admin Pages
 import RequestManagementPage from "./pages/admin/RequestManagementPage";
 import ChangeRequestManagementPage from "./pages/admin/ChangeRequestManagementPage";
 import UserManagementPage from "./pages/admin/UserManagementPage";
 import ResourceMonitoringPage from "./pages/admin/ResourceMonitoringPage";
+import ImageManagementPage from "./pages/admin/ImageManagementPage";
 
 // Other Pages
 import AccountPage from "./pages/AccountPage";
@@ -45,7 +42,7 @@ const AppContent = () => {
         element={
           isAuthenticated ? (
             <Navigate
-              to={user?.role === "ADMIN" ? "/admin/dashboard" : "/dashboard"}
+              to={user?.role === "ADMIN" ? "/admin/request-management" : "/application"}
               replace
             />
           ) : (
@@ -58,7 +55,7 @@ const AppContent = () => {
         element={
           isAuthenticated ? (
             <Navigate
-              to={user?.role === "ADMIN" ? "/admin/dashboard" : "/dashboard"}
+              to={user?.role === "ADMIN" ? "/admin/request-management" : "/application"}
               replace
             />
           ) : (
@@ -68,17 +65,6 @@ const AppContent = () => {
       />
 
       {/* Protected User Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout user={user} onLogout={logout}>
-              <UserDashboard user={user} />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-
       <Route
         path="/application"
         element={
@@ -135,17 +121,6 @@ const AppContent = () => {
       />
 
       {/* Protected Admin Routes */}
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute requireAdmin>
-            <DashboardLayout user={user} onLogout={logout}>
-              <AdminDashboard />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-
       <Route
         path="/admin/request-management"
         element={
@@ -221,6 +196,17 @@ const AppContent = () => {
       />
 
       <Route
+        path="/admin/images"
+        element={
+          <ProtectedRoute requireAdmin>
+            <DashboardLayout user={user} onLogout={logout}>
+              <ImageManagementPage />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin/settings"
         element={
           <ProtectedRoute requireAdmin>
@@ -246,7 +232,7 @@ const AppContent = () => {
         element={
           isAuthenticated ? (
             <Navigate
-              to={user?.role === "ADMIN" ? "/admin/dashboard" : "/dashboard"}
+              to={user?.role === "ADMIN" ? "/admin/request-management" : "/application"}
               replace
             />
           ) : (

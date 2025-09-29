@@ -9,6 +9,7 @@ import {
   UsersIcon,
   ClipboardDocumentListIcon,
   ArrowsRightLeftIcon,
+  PhotoIcon,
 } from "@heroicons/react/24/outline";
 
 const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
@@ -19,7 +20,6 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
   };
 
   const userMenuItems = [
-    { name: "대시보드", href: "/dashboard", icon: HomeIcon },
     { name: "서버 신청", href: "/application", icon: ServerIcon },
     { name: "신청 현황", href: "/requests", icon: ClipboardDocumentListIcon },
     { name: "변경 요청 현황", href: "/my-change-requests", icon: ArrowsRightLeftIcon },
@@ -41,6 +41,7 @@ const Sidebar = ({ isCollapsed, userRole = "USER" }) => {
     { name: "사용자 관리", href: "/admin/users", icon: UsersIcon },
     { name: "리소스 모니터링", href: "/admin/monitoring", icon: ChartBarIcon },
     { name: "컨테이너 관리", href: "/admin/containers", icon: ServerIcon },
+    { name: "이미지 관리", href: "/admin/images", icon: PhotoIcon },
     { name: "시스템 설정", href: "/admin/settings", icon: CogIcon },
   ];
 

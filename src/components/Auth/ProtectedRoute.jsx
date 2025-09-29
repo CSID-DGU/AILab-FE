@@ -22,8 +22,8 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (requireAdmin && user?.role !== "ADMIN") {
-    // Redirect to user dashboard if not admin
-    return <Navigate to="/dashboard" replace />;
+    // Redirect to application page if not admin
+    return <Navigate to="/application" replace />;
   }
 
   return children;
