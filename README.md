@@ -1,90 +1,98 @@
 # DGU AI Lab Frontend
 
-A modern React application built with Vite for fast development and optimized builds.
+A modern React application built with Vite, React 19, and Tailwind CSS.
 
-## Features
-
-- ⚡️ **Vite** - Lightning fast build tool
-- ⚛️ **React 19** - Latest React with modern features
-- 🎨 **Hot Module Replacement** - Instant updates during development
-- 📦 **ES Modules** - Modern JavaScript module system
-- 🔧 **ESLint** - Code linting for better code quality
-- 🎯 **React Router** - Client-side routing for navigation
-- 💨 **Tailwind CSS** - Utility-first CSS framework for styling
-
-## Getting Started
-
-### Prerequisites
+## Prerequisites
 
 - Node.js (version 16 or higher)
 - npm or yarn
 
-### Installation
+## Development
 
-1. Clone the repository or use this project
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Development
+Install dependencies:
+```bash
+npm install
+```
 
 Start the development server:
-
 ```bash
 npm run dev
 ```
 
 The application will be available at `http://localhost:5173`
 
-### Build
+## Build
 
 Create a production build:
-
 ```bash
 npm run build
 ```
 
-### Preview
-
 Preview the production build locally:
-
 ```bash
 npm run preview
 ```
 
-### Linting
+## Deployment
 
-Run ESLint to check code quality:
+### Kubernetes Deployment
 
+For complete Kubernetes deployment instructions including Nginx Ingress setup, see [README-DEPLOYMENT.md](README-DEPLOYMENT.md).
+
+Quick deployment steps:
 ```bash
-npm run lint
+# 1. Build and push Docker image
+docker build -t ailab-frontend:latest .
+docker tag ailab-frontend:latest dguailab/ailab-frontend:latest
+docker push dguailab/ailab-frontend:latest
+
+# 2. Deploy to Kubernetes
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# 3. Verify deployment
+kubectl rollout status deployment/ailab-frontend -n ailab-frontend
 ```
+
+Access the application at: `http://210.94.179.19:9775`
+
+### Plain Deployment
+
+For non-Kubernetes deployment, use Docker or serve the static build:
+
+**Using Docker:**
+```bash
+# Build Docker image
+docker build -t ailab-frontend:latest .
+
+# Run container
+docker run -d -p 80:80 ailab-frontend:latest
+```
+
+Access at: `http://localhost`
+
+**Using Static Server:**
+```bash
+# Build the application
+npm run build
+
+# Serve with any static file server
+npx serve -s dist -p 80
+```
+
+Access at: `http://localhost`
 
 ## Project Structure
 
 ```
+├── k8s/             # Kubernetes manifests
 ├── public/          # Static assets
-├── src/            # Source code
-│   ├── components/ # React components (Navbar, etc.)
-│   ├── pages/      # Page components (HomePage, ExamplePage)
-│   ├── App.jsx     # Main App component with routing
-│   ├── main.jsx    # Application entry point
-│   └── index.css   # Global styles with Tailwind
-├── index.html      # HTML template
-├── package.json    # Dependencies and scripts
-├── vite.config.js  # Vite configuration
-├── tailwind.config.js # Tailwind CSS configuration
-└── postcss.config.js  # PostCSS configuration
+├── src/
+│   ├── components/  # React components
+│   ├── pages/       # Page components
+│   ├── App.jsx      # Main app with routing
+│   └── main.jsx     # Entry point
+└── vite.config.js   # Vite configuration
 ```
-
-## Available Pages
-
-- **Home (/)** - Main page with a counter example
-- **Example (/example)** - Simple example page with text
-
-## Contributing
-
-1. Follow the coding standards defined in `.eslintrc`
-2. Use meaningful commit messages
-3. Test your changes before submitting
