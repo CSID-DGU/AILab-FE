@@ -14,14 +14,108 @@ The GitHub Actions workflow automatically:
 
 Before setting up GitHub Actions, you need:
 1. A Docker Hub account
-2. Access to your Kubernetes cluster
+2. Access to your Kubernetes cluster (private network at 192.168.2.18:6443)
 3. GitHub repository with Actions enabled
+4. A machine with kubectl access to your cluster (FARM8)
+
+## Important: Self-Hosted Runner Required
+
+Your Kubernetes cluster runs on a private IP address (192.168.2.18) that's only accessible from within your local network. GitHub's hosted runners cannot reach this cluster, so you must use a **self-hosted runner** on a machine that has network access to your cluster.
+
+The workflow is configured to run on your FARM8 machine using `runs-on: self-hosted`.
 
 ## Setup Instructions
 
+### Step 0: Set Up Self-Hosted GitHub Runner on FARM8
+
+This is a **required** step before the workflow can deploy to your cluster.
+
+#### A. Navigate to GitHub Runner Settings
+
+1. Go to your GitHub repository
+2. Click **Settings** → **Actions** → **Runners**
+3. Click **New self-hosted runner**
+4. Select **Linux** as the operating system
+5. Select **x64** as the architecture
+
+#### B. Install the Runner on FARM8
+
+SSH into your FARM8 machine and run the commands provided by GitHub:
+
+```bash
+# Create a directory for the runner
+mkdir -p ~/actions-runner && cd ~/actions-runner
+
+# Download the latest runner package (GitHub will provide the exact URL)
+curl -o actions-runner-linux-x64-2.311.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.311.0/actions-runner-linux-x64-2.311.0.tar.gz
+
+# Extract the installer
+tar xzf ./actions-runner-linux-x64-2.311.0.tar.gz
+```
+
+#### C. Configure the Runner
+
+Run the configuration script with the token provided by GitHub:
+
+```bash
+./config.sh --url https://github.com/YOUR_USERNAME/AILab-FE --token YOUR_GITHUB_PROVIDED_TOKEN
+```
+
+When prompted:
+- **Runner name**: Press Enter for default or type `farm8-runner`
+- **Runner group**: Press Enter for default
+- **Labels**: Press Enter for default (will use `self-hosted,Linux,X64`)
+- **Work folder**: Press Enter for default
+
+#### D. Install as a Service (Recommended)
+
+This ensures the runner starts automatically and runs in the background:
+
+```bash
+# Install the service
+sudo ./svc.sh install
+
+# Start the service
+sudo ./svc.sh start
+
+# Check the status
+sudo ./svc.sh status
+```
+
+#### E. Verify Installation
+
+1. Go back to GitHub **Settings** → **Actions** → **Runners**
+2. You should see your runner listed with a green "Idle" status
+3. The runner is now ready to execute workflows!
+
+**Alternative:** Run without service (requires keeping terminal open):
+```bash
+./run.sh
+```
+
+### Runner Troubleshooting
+
+**Runner is offline:**
+```bash
+sudo ./svc.sh status
+sudo ./svc.sh restart
+```
+
+**Check runner logs:**
+```bash
+sudo journalctl -u actions.runner.* -f
+```
+
+**Remove and reconfigure:**
+```bash
+sudo ./svc.sh stop
+sudo ./svc.sh uninstall
+./config.sh remove --token YOUR_REMOVAL_TOKEN
+```
+
 ### Step 1: Configure GitHub Secrets
 
-You need to add three secrets to your GitHub repository:
+You need to add two secrets to your GitHub repository:
 
 1. Go to your GitHub repository
 2. Navigate to **Settings** → **Secrets and variables** → **Actions**
@@ -41,23 +135,22 @@ You need to add three secrets to your GitHub repository:
   3. Give it a name (e.g., "github-actions")
   4. Copy the token and use it as the secret value
 
-**KUBE_CONFIG**
-- Your Kubernetes config file, base64 encoded
-- To generate this value:
-  ```bash
-  # On your local machine or server where kubectl is configured
-  cat ~/.kube/config | base64 -w 0
-  ```
-- Copy the entire output and paste it as the secret value
+**Note:** The `KUBE_CONFIG` secret is NOT needed because the self-hosted runner on FARM8 already has kubectl configured and can access your cluster directly.
 
 ### Step 2: Verify Workflow File
 
 The workflow file is already created at [.github/workflows/deploy.yml](.github/workflows/deploy.yml). It contains:
 
+- **Runner**: Uses `runs-on: self-hosted` to run on your FARM8 machine
 - **Trigger**: Automatically runs on push to `main` branch, or can be manually triggered
 - **Build**: Creates Docker image with caching for faster builds
-- **Deploy**: Applies Kubernetes manifests and restarts deployment
+- **Deploy**: Uses the existing kubectl configuration on FARM8 to apply manifests and restart deployment
 - **Verify**: Checks deployment status and shows logs on failure
+
+**Key differences from standard workflows:**
+- No kubeconfig setup needed (uses FARM8's existing kubectl configuration)
+- Runs directly on your local network with access to the private Kubernetes cluster
+- kubectl commands execute with your existing permissions and context
 
 ### Step 3: Test the Workflow
 
@@ -142,34 +235,57 @@ The workflow uses Docker layer caching to speed up builds:
    ```
 3. If using a token, ensure it has "Read, Write, Delete" permissions
 
-### Workflow Fails at "Configure kubectl"
+### Workflow Fails at "Verify kubectl connection"
 
-**Problem**: `KUBE_CONFIG` secret is incorrect or malformed
+**Problem**: kubectl cannot connect to cluster from FARM8
 
 **Solution**:
-1. Regenerate the base64-encoded config:
+1. SSH into FARM8 and verify kubectl works:
    ```bash
-   cat ~/.kube/config | base64 -w 0
+   kubectl cluster-info
+   kubectl get nodes
    ```
-2. Update the `KUBE_CONFIG` secret in GitHub
-3. Ensure there are no extra spaces or newlines when pasting
+2. If kubectl doesn't work on FARM8, check your kubeconfig:
+   ```bash
+   cat ~/.kube/config
+   ```
+3. Ensure the runner has permission to use kubectl (usually runs as the user who installed it)
 
 ### Workflow Fails at "Deploy to Kubernetes"
 
-**Problem**: Kubernetes connection or permission issues
+**Problem**: Kubernetes permission issues or manifest errors
 
 **Solution**:
-1. Check if your Kubernetes cluster is accessible:
+1. Check the runner service status:
    ```bash
-   kubectl cluster-info
+   sudo systemctl status actions.runner.*
    ```
-2. Verify the service account has proper permissions:
+2. Verify kubectl permissions on FARM8:
    ```bash
    kubectl auth can-i create deployments -n ailab-frontend
    kubectl auth can-i create services -n ailab-frontend
    kubectl auth can-i create ingresses -n ailab-frontend
    ```
-3. Check the "Verify kubectl connection" step in the workflow logs
+3. Check the workflow logs in GitHub Actions for specific error messages
+
+### Runner Goes Offline
+
+**Problem**: Self-hosted runner shows as offline in GitHub
+
+**Solution**:
+1. Check runner service on FARM8:
+   ```bash
+   sudo ./svc.sh status
+   ```
+2. Restart the service:
+   ```bash
+   cd ~/actions-runner
+   sudo ./svc.sh restart
+   ```
+3. Check for errors:
+   ```bash
+   sudo journalctl -u actions.runner.* -n 50
+   ```
 
 ### Deployment Succeeds but Application Doesn't Work
 
@@ -282,9 +398,13 @@ jobs:
 
 1. **Never commit secrets**: Always use GitHub Secrets, never hardcode credentials
 2. **Use Docker tokens**: Instead of Docker password, use access tokens with limited scope
-3. **Limit kubeconfig**: Create a service account with minimal required permissions
+3. **Secure the runner**: The self-hosted runner has full access to your cluster
+   - Only trusted collaborators should be able to trigger workflows
+   - Consider using [runner labels](https://docs.github.com/en/actions/hosting-your-own-runners/using-labels-with-self-hosted-runners) for additional control
+   - Keep the runner updated regularly
 4. **Review workflows**: Audit workflow runs regularly for suspicious activity
 5. **Branch protection**: Enable branch protection rules to require reviews before merging to main
+6. **Limit runner access**: The runner user should have minimal system permissions beyond kubectl access
 
 ## Manual Deployment (Fallback)
 
@@ -301,10 +421,18 @@ If GitHub Actions is unavailable, you can still deploy manually following the in
 
 Once set up, your deployment workflow is:
 
-1. **Develop locally**: Make code changes on a feature branch
-2. **Create PR**: Open a pull request to `main`
-3. **Review & Merge**: After review, merge to `main`
-4. **Automatic deployment**: GitHub Actions automatically builds and deploys
-5. **Verify**: Check the application at http://210.94.179.19:9775
+1. **One-time setup**: Install self-hosted runner on FARM8 (see Step 0)
+2. **Configure secrets**: Add Docker Hub credentials to GitHub (see Step 1)
+3. **Develop locally**: Make code changes on a feature branch
+4. **Create PR**: Open a pull request to `main`
+5. **Review & Merge**: After review, merge to `main`
+6. **Automatic deployment**: GitHub Actions automatically builds and deploys on FARM8
+7. **Verify**: Check the application at http://210.94.179.19:9775
 
-No manual Docker or kubectl commands needed!
+The self-hosted runner on FARM8 provides:
+- Direct network access to your private Kubernetes cluster
+- No need for kubeconfig secrets or VPN tunneling
+- Leverages your existing kubectl configuration
+- More secure (runner is on your controlled infrastructure)
+
+No manual Docker or kubectl commands needed after initial setup!
