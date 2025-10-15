@@ -32,6 +32,23 @@ Before deploying, ensure you have the following installed and configured:
    docker login
    ```
 
+## Environment Configuration
+
+The application uses `.env.production` for production builds. This file contains:
+
+```bash
+VITE_API_BASE_URL=http://210.94.179.19:9796
+VITE_NODE_ENV=production
+```
+
+**How it works:**
+- When `npm run build` runs during Docker build, Vite automatically loads `.env.production`
+- Environment variables are embedded into the built JavaScript files
+- `.env.production` is committed to git and included in Docker builds
+- `.env` is excluded by both `.gitignore` and `.dockerignore`
+
+**Important:** If you need to change the API URL, update `.env.production` and rebuild the Docker image.
+
 ## Complete Deployment Pipeline
 
 This is a complete end-to-end deployment guide. Each step must be completed in order.

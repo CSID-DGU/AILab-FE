@@ -7,6 +7,27 @@ A modern React application built with Vite, React 19, and Tailwind CSS.
 - Node.js (version 16 or higher)
 - npm or yarn
 
+## Environment Configuration
+
+This project uses environment files to configure API endpoints:
+
+- `.env.production` - Production settings (committed to git, used in Docker builds)
+- `.env` - Local development settings (optional, not committed)
+
+The `.env.production` file contains:
+```bash
+VITE_API_BASE_URL=http://210.94.179.19:9796
+VITE_NODE_ENV=production
+```
+
+When building for production, Vite automatically loads `.env.production`. This file is included in Docker builds (not in `.dockerignore`) and environment variables are embedded into the built JavaScript files.
+
+For local development with different settings, create a `.env` file (ignored by git and Docker):
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+VITE_NODE_ENV=development
+```
+
 ## Development
 
 Install dependencies:
