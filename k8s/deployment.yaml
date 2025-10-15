@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: ailab-frontend
-        image: ailab-frontend:latest
-        imagePullPolicy: IfNotPresent
+        image: dguailab/ailab-frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 9775
         resources:
