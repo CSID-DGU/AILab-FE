@@ -2,21 +2,48 @@
 
 set -e
 
-echo "Building Docker image..."
-docker build -t ailab-frontend:latest .
+REGISTRY="dguailab"
+IMAGE_NAME="ailab-frontend"
+TAG="latest"
 
-echo "Creating namespace..."
+echo "=========================================="
+echo "AILab Frontend Deployment Script"
+echo "=========================================="
+echo ""
+
+echo "Step 1: Building Docker image..."
+docker build -t ${IMAGE_NAME}:${TAG} .
+
+echo ""
+echo "Step 2: Tagging image for registry..."
+docker tag ${IMAGE_NAME}:${TAG} ${REGISTRY}/${IMAGE_NAME}:${TAG}
+
+echo ""
+echo "Step 3: Pushing image to registry..."
+docker push ${REGISTRY}/${IMAGE_NAME}:${TAG}
+
+echo ""
+echo "Step 4: Creating namespace..."
 kubectl apply -f k8s/namespace.yaml
 
-echo "Deploying to Kubernetes..."
+echo ""
+echo "Step 5: Deploying to Kubernetes..."
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
 
-echo "Waiting for deployment to be ready..."
+echo ""
+echo "Step 6: Waiting for deployment to be ready..."
 kubectl rollout status deployment/ailab-frontend -n ailab-frontend
 
+echo ""
+echo "=========================================="
 echo "Deployment complete!"
+echo "=========================================="
 echo "Access the application at: http://210.94.179.19:9775"
 echo ""
-echo "Note: Ensure Nginx Ingress Controller is installed and configured to listen on port 9775"
+echo "Note: Ensure Nginx Ingress Controller is installed:"
+echo "  helm install nginx-ailab ingress-nginx/ingress-nginx \\"
+echo "    --namespace ailab-frontend \\"
+echo "    --create-namespace \\"
+echo "    --values k8s/ingress-controller-values.yaml"
