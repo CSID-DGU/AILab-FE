@@ -9,8 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: 210.94.179.19
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix
