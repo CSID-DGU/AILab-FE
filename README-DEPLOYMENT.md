@@ -1,5 +1,24 @@
 # Kubernetes Deployment Guide
 
+## Deployment Options
+
+This project supports two deployment methods:
+
+1. **[Automated Deployment with GitHub Actions](README-GITHUB-ACTIONS.md)** (Recommended)
+   - Automatically builds and deploys when you push to `main`
+   - No manual Docker or kubectl commands needed
+   - Continuous deployment with verification
+   - [Setup Guide →](README-GITHUB-ACTIONS.md)
+
+2. **Manual Deployment** (This guide)
+   - Full control over the deployment process
+   - Useful for initial setup or troubleshooting
+   - Required for setting up the ingress controller
+
+**For automated deployments**, see [README-GITHUB-ACTIONS.md](README-GITHUB-ACTIONS.md) after completing the initial setup below.
+
+---
+
 ## Namespace
 The application will be deployed to the `ailab-frontend` namespace.
 
@@ -51,7 +70,9 @@ VITE_NODE_ENV=production
 
 ## Complete Deployment Pipeline
 
-This is a complete end-to-end deployment guide. Each step must be completed in order.
+This is a complete end-to-end **manual** deployment guide. Each step must be completed in order.
+
+> **Note:** After initial setup, consider using [GitHub Actions for automated deployment](README-GITHUB-ACTIONS.md) instead of manual steps.
 
 ### Step 1: Build and Push Docker Image
 
@@ -67,6 +88,8 @@ docker tag ailab-frontend:latest dguailab/ailab-frontend:latest
 # Push to registry
 docker push dguailab/ailab-frontend:latest
 ```
+
+> **Automation tip:** With GitHub Actions, this happens automatically on every push to `main`. [Learn more →](README-GITHUB-ACTIONS.md)
 
 ### Step 2: Install Nginx Ingress Controller (One-time setup)
 
@@ -127,6 +150,26 @@ http://210.94.179.19:9775
 **Note:** The application is now exposed via Nginx Ingress Controller instead of kubectl port-forward. This is more reliable and production-ready.
 
 ## Update Deployment (After Code Changes)
+
+### Option 1: Automated Update (Recommended)
+
+If you've set up [GitHub Actions](README-GITHUB-ACTIONS.md), simply push your changes:
+
+```bash
+git add .
+git commit -m "Your change description"
+git push origin main
+```
+
+GitHub Actions will automatically:
+- Build the new Docker image
+- Push to Docker Hub
+- Deploy to Kubernetes
+- Verify the deployment
+
+Monitor progress at: `https://github.com/YOUR_USERNAME/YOUR_REPO/actions`
+
+### Option 2: Manual Update
 
 When you make changes to your code or configuration, follow these steps:
 
@@ -239,3 +282,13 @@ helm install nginx-ailab ingress-nginx/ingress-nginx \
 - Resource limits: 256Mi memory, 200m CPU
 - Ingress routing eliminates the need for manual port forwarding
 - Nginx Ingress Controller managed via Helm for easy updates and configuration
+
+## Next Steps
+
+After completing the initial manual setup:
+
+1. **Set up automated deployment**: Follow the [GitHub Actions setup guide](README-GITHUB-ACTIONS.md) to enable continuous deployment
+2. **Test the automation**: Push a small change to verify the automated pipeline works
+3. **Monitor deployments**: Use the GitHub Actions dashboard to track deployment status
+
+With automation in place, you'll only need these manual commands for troubleshooting or special situations.

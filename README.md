@@ -56,11 +56,27 @@ npm run preview
 
 ## Deployment
 
-### Kubernetes Deployment
+### Automated Deployment (Recommended)
 
-For complete Kubernetes deployment instructions including Nginx Ingress setup, see [README-DEPLOYMENT.md](README-DEPLOYMENT.md).
+Set up GitHub Actions for continuous deployment. Every push to `main` automatically builds and deploys your application.
 
-Quick deployment steps:
+**Setup:**
+See [README-GITHUB-ACTIONS.md](README-GITHUB-ACTIONS.md) for complete instructions.
+
+**Usage:**
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
+
+GitHub Actions will automatically handle the build and deployment process.
+
+### Manual Kubernetes Deployment
+
+For manual deployment or initial setup, see [README-DEPLOYMENT.md](README-DEPLOYMENT.md).
+
+Quick manual deployment steps:
 ```bash
 # 1. Build and push Docker image
 docker build -t ailab-frontend:latest .
