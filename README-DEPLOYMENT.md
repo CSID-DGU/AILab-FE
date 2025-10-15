@@ -8,7 +8,7 @@ The application will be deployed to the `ailab-frontend` namespace.
 ### Prerequisites
 - Docker installed on FARM8 server (210.94.179.19)
 - kubectl configured to access the Kubernetes cluster
-- Port 9775 forwarded from 210.94.179.19 to FARM8 machine
+- **Nginx Ingress Controller** installed in the cluster and configured to listen on port 9775
 
 ### Deploy Steps
 
@@ -28,29 +28,20 @@ docker build -t ailab-frontend:latest .
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
 
 # Check deployment status
 kubectl get pods -n ailab-frontend
 kubectl get svc -n ailab-frontend
+kubectl get ingress -n ailab-frontend
 ```
 
-2. Start port forwarding:
-```bash
-chmod +x port-forward.sh
-./port-forward.sh
-```
-
-Or manually:
-```bash
-kubectl port-forward -n ailab-frontend service/ailab-frontend 9775:9775 --address=0.0.0.0
-```
-
-3. Access the application:
+2. Access the application:
 ```
 http://210.94.179.19:9775
 ```
 
-**Note:** Keep the port-forward command running in a terminal or use a process manager like `systemd` or `screen` to run it in the background.
+**Note:** The application is now exposed via Nginx Ingress Controller instead of kubectl port-forward. This is more reliable and production-ready.
 
 ## Update Deployment
 
@@ -69,10 +60,14 @@ kubectl rollout status deployment/ailab-frontend -n ailab-frontend
 # View logs
 kubectl logs -f deployment/ailab-frontend -n ailab-frontend
 
+# View ingress details
+kubectl describe ingress ailab-frontend -n ailab-frontend
+
 # Scale deployment
 kubectl scale deployment/ailab-frontend --replicas=3 -n ailab-frontend
 
 # Delete deployment
+kubectl delete -f k8s/ingress.yaml
 kubectl delete -f k8s/deployment.yaml
 kubectl delete -f k8s/service.yaml
 kubectl delete namespace ailab-frontend
@@ -89,38 +84,55 @@ To enable automated deployment:
    - `SSH_PRIVATE_KEY`: SSH private key for authentication
 3. Update the deployment script path in the workflow file
 
-## Port Forwarding as a Service (Optional)
+## Nginx Ingress Controller Setup
 
-To keep port-forward running permanently, create a systemd service:
+If you don't have Nginx Ingress Controller installed yet, install it using Helm:
 
 ```bash
-sudo tee /etc/systemd/system/ailab-frontend-portforward.service > /dev/null <<EOF
-[Unit]
-Description=AILab Frontend Port Forward
-After=network.target
+# Add the Nginx Ingress Helm repository
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
 
-[Service]
-Type=simple
-User=$USER
-ExecStart=/usr/bin/kubectl port-forward -n ailab-frontend service/ailab-frontend 9775:9775 --address=0.0.0.0
-Restart=always
-RestartSec=10
+# Install Nginx Ingress Controller with NodePort on 9775
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=NodePort \
+  --set controller.service.nodePorts.http=9775
 
-[Install]
-WantedBy=multi-user.target
-EOF
+# Wait for the ingress controller to be ready
+kubectl wait --namespace ingress-nginx \
+  --for=condition=ready pod \
+  --selector=app.kubernetes.io/component=controller \
+  --timeout=120s
 
-sudo systemctl daemon-reload
-sudo systemctl enable ailab-frontend-portforward
-sudo systemctl start ailab-frontend-portforward
+# Verify installation
+kubectl get svc -n ingress-nginx
 ```
+
+To upgrade the ingress controller configuration:
+```bash
+helm upgrade ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --set controller.service.type=NodePort \
+  --set controller.service.nodePorts.http=9775
+```
+
+## Architecture
+
+- **Nginx container**: Listens on port 80 (standard HTTP)
+- **Kubernetes Service**: ClusterIP type exposing port 80 internally
+- **Nginx Ingress Controller**: Routes external traffic from port 9775 to the service
+- **External access**: http://210.94.179.19:9775
+- **Benefits**:
+  - No need for kubectl port-forward
+  - More reliable and production-ready
+  - Easier to scale and manage
+  - Better separation of concerns (ingress vs. service)
 
 ## Notes
 
-- The application runs on port 9775 inside the container
-- Service type: ClusterIP (default)
-- Exposed via kubectl port-forward on port 9775
-- External access: http://210.94.179.19:9775
 - 2 replicas for high availability
 - Resource limits: 256Mi memory, 200m CPU
-- The nginx.conf includes a proxy pass to `/api` endpoint (update as needed)
+- Ingress routing eliminates the need for manual port forwarding
+- Nginx Ingress Controller managed via Helm for easy updates and configuration
