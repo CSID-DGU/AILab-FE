@@ -86,36 +86,49 @@ To enable automated deployment:
 
 ## Nginx Ingress Controller Setup
 
-If you don't have Nginx Ingress Controller installed yet, install it using Helm:
+This project uses a **dedicated Nginx Ingress Controller** on port 9775, separate from other services (like JupyterHub).
+
+### Install Dedicated Ingress Controller
 
 ```bash
-# Add the Nginx Ingress Helm repository
+# Add the Nginx Ingress Helm repository (if not already added)
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
 helm repo update
 
-# Install Nginx Ingress Controller with NodePort on 9775
-helm install ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
+# Install dedicated Nginx Ingress Controller for AILab Frontend
+helm install nginx-ailab ingress-nginx/ingress-nginx \
+  --namespace ailab-frontend \
   --create-namespace \
-  --set controller.service.type=NodePort \
-  --set controller.service.nodePorts.http=9775
+  --values k8s/ingress-controller-values.yaml
 
 # Wait for the ingress controller to be ready
-kubectl wait --namespace ingress-nginx \
+kubectl wait --namespace ailab-frontend \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
   --timeout=120s
 
 # Verify installation
-kubectl get svc -n ingress-nginx
+kubectl get svc -n ailab-frontend
+kubectl get ingressclass
 ```
+
+You should see:
+- Service `nginx-ailab-ingress-nginx-controller` with NodePort 9775
+- IngressClass `nginx-ailab`
+
+### Update Ingress Controller
 
 To upgrade the ingress controller configuration:
 ```bash
-helm upgrade ingress-nginx ingress-nginx/ingress-nginx \
-  --namespace ingress-nginx \
-  --set controller.service.type=NodePort \
-  --set controller.service.nodePorts.http=9775
+helm upgrade nginx-ailab ingress-nginx/ingress-nginx \
+  --namespace ailab-frontend \
+  --values k8s/ingress-controller-values.yaml
+```
+
+### Uninstall Ingress Controller
+
+```bash
+helm uninstall nginx-ailab -n ailab-frontend
 ```
 
 ## Architecture

@@ -1,0 +1,20 @@
+# Helm values for dedicated Nginx Ingress Controller
+controller:
+  ingressClassResource:
+    name: nginx-ailab
+    enabled: true
+    default: false
+    controllerValue: "k8s.io/ingress-nginx-ailab"
+
+  ingressClass: nginx-ailab
+
+  service:
+    type: NodePort
+    nodePorts:
+      http: 9775
+
+  # Use a different election ID to avoid conflicts
+  electionID: ingress-controller-leader-ailab
+
+  # Different controller class
+  ingressClassByName: true
