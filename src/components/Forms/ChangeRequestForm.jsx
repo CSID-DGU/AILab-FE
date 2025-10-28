@@ -237,7 +237,7 @@ const ChangeRequestForm = ({
         changeRequestData
       );
 
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 201) {
         onSuccess(
           "변경 요청이 성공적으로 제출되었습니다. 관리자 승인을 기다려주세요."
         );

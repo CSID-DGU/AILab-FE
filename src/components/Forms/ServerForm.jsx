@@ -152,7 +152,7 @@ const ServerForm = ({
 
       const response = await requestService.createRequest(requestData);
 
-      if (response.status === 200) {
+      if (response.status === 200 || response.status === 201) {
         // 폼 데이터 초기화
         setFormData({
           ubuntu_username: "",
