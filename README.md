@@ -88,7 +88,7 @@ kubectl apply -f k8s/ingress.yaml
 kubectl rollout status deployment/ailab-frontend -n ailab-frontend
 ```
 
-Access the application at: `http://210.94.179.19:9775`
+Access the application at: `http://210.94.179.19:30081`
 
 ### Plain Deployment
 

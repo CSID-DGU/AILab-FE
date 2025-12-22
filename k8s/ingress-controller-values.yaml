@@ -11,7 +11,7 @@ controller:
   service:
     type: NodePort
     nodePorts:
-      http: 9775
+      http: 30081
 
   # Use a different election ID to avoid conflicts
   electionID: ingress-controller-leader-ailab
