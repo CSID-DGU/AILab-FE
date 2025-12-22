@@ -27,10 +27,6 @@ import RequestStatusPage from "./pages/RequestStatusPage";
 import MyChangeRequestsPage from "./pages/MyChangeRequestsPage";
 import UserResourceMonitoringPage from "./pages/ResourceMonitoringPage";
 
-// Legacy Pages (for reference)
-import HomePage from "./pages/HomePage";
-import ExamplePage from "./pages/ExamplePage";
-
 const AppContent = () => {
   const { isAuthenticated, user, login, logout } = useAuth();
 
@@ -221,10 +217,6 @@ const AppContent = () => {
           </ProtectedRoute>
         }
       />
-
-      {/* Legacy Routes (for reference) */}
-      <Route path="/legacy" element={<HomePage />} />
-      <Route path="/example" element={<ExamplePage />} />
 
       {/* Root Route */}
       <Route

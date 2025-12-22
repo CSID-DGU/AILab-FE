@@ -60,9 +60,6 @@ npm run preview
 
 Set up GitHub Actions for continuous deployment. Every push to `main` automatically builds and deploys your application.
 
-**Setup:**
-See [README-GITHUB-ACTIONS.md](README-GITHUB-ACTIONS.md) for complete instructions.
-
 **Usage:**
 ```bash
 git add .
@@ -73,8 +70,6 @@ git push origin main
 GitHub Actions will automatically handle the build and deployment process.
 
 ### Manual Kubernetes Deployment
-
-For manual deployment or initial setup, see [README-DEPLOYMENT.md](README-DEPLOYMENT.md).
 
 Quick manual deployment steps:
 ```bash
