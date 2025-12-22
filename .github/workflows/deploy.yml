@@ -14,7 +14,8 @@ env:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    # Target the self-hosted runner on CSID-DGU-Desktop
+    runs-on: [self-hosted, CSID-DGU-Desktop]
 
     steps:
       - name: Checkout code

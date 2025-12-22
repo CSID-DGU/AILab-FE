@@ -37,4 +37,4 @@ React 19 + Vite + Tailwind frontend for DGU AI Lab.
   kubectl apply -f k8s/ingress.yaml
   kubectl rollout status deployment/ailab-frontend -n ailab-frontend
   ```
-  Or deploy through `./deploy.sh`
+  - Or deploy through `./deploy.sh`
