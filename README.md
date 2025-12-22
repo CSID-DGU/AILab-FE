@@ -37,10 +37,4 @@ React 19 + Vite + Tailwind frontend for DGU AI Lab.
   kubectl apply -f k8s/ingress.yaml
   kubectl rollout status deployment/ailab-frontend -n ailab-frontend
   ```
-
-## Migrate to Another Kubernetes Cluster
-1) Switch context: `kubectl config use-context <new-cluster>`; ensure the NGINX ingress class or host matches the new setup (edit `k8s/ingress.yaml` as needed).  
-2) Push the image to a registry the new cluster can pull from; update `k8s/deployment.yaml` `image:` (and add an `imagePullSecret` if the registry is private).  
-3) Update env values (e.g., `VITE_API_BASE_URL`) to point at the backend reachable from the new cluster, rebuild, and push the image.  
-4) Apply manifests: `kubectl apply -f k8s/namespace.yaml && kubectl apply -f k8s`.  
-5) Verify: `kubectl rollout status deployment/ailab-frontend -n ailab-frontend` and check ingress/service reachability.
+  Or deploy through `./deploy.sh`
