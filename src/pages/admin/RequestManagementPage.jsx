@@ -80,8 +80,8 @@ const RequestManagementPage = () => {
       return request.status === filter;
     })
     .sort((a, b) => {
-      // Sort by priority: PENDING > FULFILLED > DENIED
-      const statusPriority = { PENDING: 1, FULFILLED: 2, DENIED: 3, DELETED: 4 };
+      // Sort by priority: PENDING > PROCESSING > FULFILLED > DENIED > DELETED
+      const statusPriority = { PENDING: 1, PROCESSING: 2, FULFILLED: 3, DENIED: 4, DELETED: 5 };
       if (statusPriority[a.status] !== statusPriority[b.status]) {
         return statusPriority[a.status] - statusPriority[b.status];
       }

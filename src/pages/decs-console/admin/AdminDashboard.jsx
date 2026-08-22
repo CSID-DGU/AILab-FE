@@ -15,6 +15,12 @@ function AdminDashboard({ onOpenContainers, containers = [], users = [] }) {
   const running = containers.filter((c) => c.status === "success").length;
   const errored = containers.filter((c) => c.status === "error").length;
   const expiring = containers.filter((c) => c.status !== "stopped" && c.expires !== "—" && c.expires <= "2026-07-11").length;
+  // 최신순(생성일 내림차순) — createdAt이 없는 항목은 맨 뒤로
+  const recentContainers = [...containers].sort((a, b) => {
+    const aKey = a.createdAt === "—" ? "" : a.createdAt;
+    const bKey = b.createdAt === "—" ? "" : b.createdAt;
+    return bKey.localeCompare(aKey);
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
@@ -41,7 +47,7 @@ function AdminDashboard({ onOpenContainers, containers = [], users = [] }) {
         </Container>
 
         <Container disablePadding header={<Header variant="h2" counter={`(${containers.length})`} actions={<Button variant="link" onClick={onOpenContainers}>전체 보기</Button>}>최근 컨테이너</Header>}>
-          <Table density="compact" trackBy="id" items={containers.slice(0, 5)} columns={[
+          <Table density="compact" trackBy="id" items={recentContainers.slice(0, 5)} columns={[
             { id: "name", header: "이름", cell: (c) => <span style={{ fontWeight: 600 }}>{c.name}</span> },
             { id: "user", header: "사용자", cell: (c) => c.user },
             { id: "gpu", header: "리소스 그룹", cell: (c) => <Badge color="brand">{c.gpu}</Badge> },
