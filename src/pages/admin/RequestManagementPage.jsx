@@ -17,6 +17,7 @@ import { mapRequestDtoToUiModel } from "../../utils/requestMapper";
 
 const STATUS_META = {
   PENDING: { type: "pending", label: "대기중" },
+  PROCESSING: { type: "in-progress", label: "처리중" },
   FULFILLED: { type: "success", label: "승인됨" },
   DENIED: { type: "error", label: "거절됨" },
   DELETED: { type: "stopped", label: "삭제됨" },
@@ -270,19 +271,19 @@ const RequestManagementPage = () => {
             상세
           </Button>
           {r.status === "PENDING" && (
-            <>
-              <Button variant="inline-link" disabled={processingRequestId !== null} loading={processingRequestId === r.request_id} onClick={() => promptApprove(r)}>
-                승인
-              </Button>
-              <Button
-                variant="inline-link"
-                disabled={processingRequestId !== null}
-                style={{ color: "var(--decs-status-error)" }}
-                onClick={() => promptDeny(r)}
-              >
-                거절
-              </Button>
-            </>
+            <Button variant="inline-link" disabled={processingRequestId !== null} loading={processingRequestId === r.request_id} onClick={() => promptApprove(r)}>
+              승인
+            </Button>
+          )}
+          {(r.status === "PENDING" || r.status === "PROCESSING") && (
+            <Button
+              variant="inline-link"
+              disabled={processingRequestId !== null}
+              style={{ color: "var(--decs-status-error)" }}
+              onClick={() => promptDeny(r)}
+            >
+              거절
+            </Button>
           )}
         </div>
       ),
@@ -367,23 +368,23 @@ const RequestManagementPage = () => {
               <Button variant="normal" onClick={() => setSelectedRequest(null)}>
                 닫기
               </Button>
+              {(sel.status === "PENDING" || sel.status === "PROCESSING") && (
+                <Button
+                  variant="normal"
+                  disabled={processingRequestId !== null}
+                  style={{
+                    color: "var(--decs-status-error)",
+                    borderColor: "var(--decs-status-error)",
+                  }}
+                  onClick={() => promptDeny(sel)}
+                >
+                  거절
+                </Button>
+              )}
               {sel.status === "PENDING" && (
-                <>
-                  <Button
-                    variant="normal"
-                    disabled={processingRequestId !== null}
-                    style={{
-                      color: "var(--decs-status-error)",
-                      borderColor: "var(--decs-status-error)",
-                    }}
-                    onClick={() => promptDeny(sel)}
-                  >
-                    거절
-                  </Button>
-                  <Button variant="primary" disabled={processingRequestId !== null} loading={processingRequestId === sel.request_id} onClick={() => promptApprove(sel)}>
-                    승인
-                  </Button>
-                </>
+                <Button variant="primary" disabled={processingRequestId !== null} loading={processingRequestId === sel.request_id} onClick={() => promptApprove(sel)}>
+                  승인
+                </Button>
               )}
             </>
           }
