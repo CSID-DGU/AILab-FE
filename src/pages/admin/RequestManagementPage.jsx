@@ -192,9 +192,9 @@ const RequestManagementPage = () => {
   };
 
   const promptDeny = (request) => {
-    const comment = prompt("거절 사유를 입력하세요:");
-    if (comment) {
-      handleStatusUpdate(request, "DENIED", comment);
+    const comment = prompt("거절 사유를 입력하세요:", "거절되었습니다.");
+    if (comment !== null) {
+      handleStatusUpdate(request, "DENIED", comment || "거절되었습니다.");
     }
   };
 
