@@ -15,6 +15,12 @@ export const requestService = {
     }),
   rejectRequest: (data) => apiClient.patch("/api/admin/requests/reject", data),
 
+  migrateRequest: (requestId, data) =>
+    apiClient.post(`/api/admin/requests/${requestId}/migrate`, data, {
+      // 새 Pod 생성·기동 대기까지 동기 처리되어 승인과 동일하게 여유를 둡니다.
+      signal: AbortSignal.timeout(310_000),
+    }),
+
   createChangeRequest: (requestId, data) =>
     apiClient.post(`/api/requests/${requestId}/change`, data),
   getChangeRequests: () => apiClient.get("/api/admin/requests/change/all"),
