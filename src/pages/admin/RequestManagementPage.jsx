@@ -13,6 +13,7 @@ import {
   KeyValuePairs,
 } from "../../design-system";
 import { requestService } from "../../services/requestService";
+import { podService } from "../../services/podService";
 import { mapRequestDtoToUiModel } from "../../utils/requestMapper";
 
 const STATUS_META = {
@@ -36,6 +37,32 @@ const RequestManagementPage = () => {
   const [filter, setFilter] = useState("ALL"); // ALL, PENDING, FULFILLED, DENIED
   const [alert, setAlert] = useState(null);
   const [processingRequestId, setProcessingRequestId] = useState(null);
+  const [processingUsername, setProcessingUsername] = useState(null);
+  const [provisioningStatus, setProvisioningStatus] = useState(null);
+
+  // 승인 처리 중(Pod 생성 포함)일 때 config-server의 세세한 진행 단계를 폴링해서 보여준다.
+  // 조회 실패는 승인 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
+  useEffect(() => {
+    if (!processingUsername) {
+      setProvisioningStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await podService.getProvisioningStatus(processingUsername);
+        if (!cancelled) setProvisioningStatus(res?.data ?? null);
+      } catch {
+        // ignore
+      }
+    };
+    poll();
+    const interval = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [processingUsername]);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -100,6 +127,7 @@ const RequestManagementPage = () => {
   const handleStatusUpdate = async (request, newStatus, comment = "") => {
     if (processingRequestId !== null) return;
     setProcessingRequestId(request.request_id);
+    if (newStatus === "FULFILLED") setProcessingUsername(request.ubuntu_username);
     try {
       let response;
 
@@ -181,6 +209,7 @@ const RequestManagementPage = () => {
       }
     } finally {
       setProcessingRequestId(null);
+      setProcessingUsername(null);
     }
   };
 
@@ -317,7 +346,12 @@ const RequestManagementPage = () => {
           ]}
         />
       )}
-      {processingRequestId !== null ? <Alert type="info">Pod 생성으로 승인 처리에 최대 5분이 걸릴 수 있습니다. 완료될 때까지 창을 닫거나 다시 클릭하지 마세요.</Alert> : null}
+      {processingRequestId !== null ? (
+        <Alert type="info">
+          Pod 생성으로 승인 처리에 최대 5분이 걸릴 수 있습니다. 완료될 때까지 창을 닫거나 다시 클릭하지 마세요.
+          {provisioningStatus?.message ? ` (현재 단계: ${provisioningStatus.message})` : null}
+        </Alert>
+      ) : null}
 
       <Header
         variant="h1"

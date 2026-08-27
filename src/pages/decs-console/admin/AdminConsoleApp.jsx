@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { AppLayout, SideNavigation, Flashbar } from "../../../design-system";
 import AdminDashboard from "./AdminDashboard";
@@ -20,7 +20,15 @@ function AdminConsoleApp() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
-  const { containers, users, error } = useDecsAdminData();
+  const { containers, users, error, refetch } = useDecsAdminData();
+
+  // 요청 관리 화면에서 승인/거절 처리 후 대시보드로 돌아왔을 때 최신 상태가 바로 보이도록,
+  // 대시보드 관련 경로에 진입할 때마다 다시 불러온다.
+  useEffect(() => {
+    if (location.pathname === "/admin" || location.pathname.startsWith("/admin/containers")) {
+      refetch();
+    }
+  }, [location.pathname, refetch]);
 
   const nav = {
     header: { text: "DECS Admin", href: "/admin" },
