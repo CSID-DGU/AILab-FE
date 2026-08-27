@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { podService } from "../services/podService";
 import userService from "../services/userService";
 import { mapAdminContainer } from "../utils/decsMapper";
@@ -15,68 +15,70 @@ export function useDecsAdminData() {
   const [containers, setContainers] = useState(undefined);
   const [users, setUsers] = useState(undefined);
   const [error, setError] = useState(null);
+  const cancelledRef = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async () => {
+    setError(null);
 
-    async function load() {
-      const [containersResult, usersResult] = await Promise.allSettled([
-        podService.getActiveContainers(),
-        userService.getAllUsers(),
-      ]);
-      if (cancelled) return;
+    const [containersResult, usersResult] = await Promise.allSettled([
+      podService.getActiveContainers(),
+      userService.getAllUsers(),
+    ]);
+    if (cancelledRef.current) return;
 
-      let hasError = false;
+    let hasError = false;
 
-      if (containersResult.status === "fulfilled" && containersResult.value?.status === 200) {
-        const activeContainers = getArrayData(containersResult.value);
-        if (activeContainers) {
-          const [details, provisioningStatuses] = await Promise.all([
-            Promise.allSettled(activeContainers.map((container) =>
-              container.podName ? podService.getPod(container.podName) : Promise.resolve(null)
-            )),
-            Promise.allSettled(activeContainers.map((container) =>
-              container.ubuntuUsername ? podService.getProvisioningStatus(container.ubuntuUsername) : Promise.resolve(null)
-            )),
-          ]);
-          if (cancelled) return;
-          setContainers(activeContainers.map((container, index) => {
-            const result = details[index];
-            const statusResult = provisioningStatuses[index];
-            const detail = result.status === "fulfilled" ? result.value?.data?.data ?? result.value?.data : null;
-            const provisioning = statusResult.status === "fulfilled" ? statusResult.value?.data : null;
-            if (container.podName && !detail && (!provisioning || provisioning.stage === "unknown")) hasError = true;
-            return mapAdminContainer({ ...container, podDetail: detail, status: detail?.status ?? provisioning?.stage });
-          }));
-        } else {
-          hasError = true;
-        }
+    if (containersResult.status === "fulfilled" && containersResult.value?.status === 200) {
+      const activeContainers = getArrayData(containersResult.value);
+      if (activeContainers) {
+        const [details, provisioningStatuses] = await Promise.all([
+          Promise.allSettled(activeContainers.map((container) =>
+            container.podName ? podService.getPod(container.podName) : Promise.resolve(null)
+          )),
+          Promise.allSettled(activeContainers.map((container) =>
+            container.ubuntuUsername ? podService.getProvisioningStatus(container.ubuntuUsername) : Promise.resolve(null)
+          )),
+        ]);
+        if (cancelledRef.current) return;
+        setContainers(activeContainers.map((container, index) => {
+          const result = details[index];
+          const statusResult = provisioningStatuses[index];
+          const detail = result.status === "fulfilled" ? result.value?.data?.data ?? result.value?.data : null;
+          const provisioning = statusResult.status === "fulfilled" ? statusResult.value?.data : null;
+          if (container.podName && !detail && (!provisioning || provisioning.stage === "unknown")) hasError = true;
+          return mapAdminContainer({ ...container, podDetail: detail, status: detail?.status ?? provisioning?.stage });
+        }));
       } else {
         hasError = true;
       }
-
-      if (usersResult.status === "fulfilled" && usersResult.value?.status === 200) {
-        const userList = getArrayData(usersResult.value);
-        if (userList) {
-          setUsers(userList);
-        } else {
-          hasError = true;
-        }
-      } else {
-        hasError = true;
-      }
-
-      if (hasError) {
-        setError(ERROR_MESSAGE);
-      }
+    } else {
+      hasError = true;
     }
 
+    if (usersResult.status === "fulfilled" && usersResult.value?.status === 200) {
+      const userList = getArrayData(usersResult.value);
+      if (userList) {
+        setUsers(userList);
+      } else {
+        hasError = true;
+      }
+    } else {
+      hasError = true;
+    }
+
+    if (hasError) {
+      setError(ERROR_MESSAGE);
+    }
+  }, []);
+
+  useEffect(() => {
+    cancelledRef.current = false;
     load();
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
     };
-  }, []);
+  }, [load]);
 
-  return { containers, users, error };
+  return { containers, users, error, refetch: load };
 }
