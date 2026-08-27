@@ -26,24 +26,6 @@ const STATUS_MAP = {
   DENIED: { type: "error", key: "denied" },
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
-
-function getApiHost() {
-  try {
-    return new URL(API_BASE_URL).hostname;
-  } catch {
-    return "localhost";
-  }
-}
-
-function getApiProtocol() {
-  try {
-    return new URL(API_BASE_URL).protocol;
-  } catch {
-    return "http:";
-  }
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return "—";
 
@@ -140,20 +122,15 @@ export function mapUserServer(dto) {
   const status = mapPodStatus(dto.status);
   const resourceGroup = dto.resourceGroup ?? {};
   const ports = getPodExternalPorts(dto);
-  const host = getApiHost();
   const sshPort = getExternalPort(findPort(ports, "ssh", 22));
   const jupyterPort = getExternalPort(findPort(ports, "jupyter", 8888));
   const sshPublicPort = toPublicPort(sshPort);
   const jupyterPublicPort = toPublicPort(jupyterPort);
   const sshCommand = sshPort && dto.ubuntuUsername
-    ? sshPublicPort
-      ? `ssh ${dto.ubuntuUsername}@${PUBLIC_HOST} -p ${sshPublicPort}`
-      : `ssh ${dto.ubuntuUsername}@${host} -p ${sshPort}`
+    ? `ssh ${dto.ubuntuUsername}@${PUBLIC_HOST} -p ${sshPublicPort ?? sshPort}`
     : "—";
   const jupyterUrl = jupyterPort
-    ? jupyterPublicPort
-      ? `http://${PUBLIC_HOST}:${jupyterPublicPort}`
-      : `${getApiProtocol()}//${host}:${jupyterPort}`
+    ? `http://${PUBLIC_HOST}:${jupyterPublicPort ?? jupyterPort}`
     : "—";
 
   return {
