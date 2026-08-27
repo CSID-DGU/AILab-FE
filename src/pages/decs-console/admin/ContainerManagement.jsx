@@ -1,15 +1,16 @@
-// ContainerManagement — Table + 검색/필터 + 행 상세 + Pagination
+// ContainerManagement — Table + 검색/필터 + 행 상세 + 무한 스크롤
 import React from "react";
-import { Table, Header, Container, StatusIndicator, Badge, Button, Input, Select, Pagination } from "../../../design-system";
+import { Table, Header, Container, StatusIndicator, Badge, Button, Input, Select } from "../../../design-system";
 
-const PAGE_SIZE = 10;
+const BATCH_SIZE = 10;
 
 function ContainerManagement({ onOpenDetail, containers = [] }) {
   const all = containers;
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [sort, setSort] = React.useState({ col: null, desc: false });
-  const [currentPage, setCurrentPage] = React.useState(1);
+  const [visibleCount, setVisibleCount] = React.useState(BATCH_SIZE);
+  const sentinelRef = React.useRef(null);
 
   let rows = all.filter((c) =>
     (q === "" || c.name.includes(q) || c.user.includes(q)) &&
@@ -19,16 +20,24 @@ function ContainerManagement({ onOpenDetail, containers = [] }) {
     const f = sort.col.sortingField;
     rows = [...rows].sort((a, b) => String(a[f]).localeCompare(String(b[f])) * (sort.desc ? -1 : 1));
   }
-  const pagesCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const hasMore = visibleCount < rows.length;
+  const pageRows = rows.slice(0, visibleCount);
 
   React.useEffect(() => {
-    setCurrentPage(1);
-  }, [q, statusFilter]);
+    setVisibleCount(BATCH_SIZE);
+  }, [q, statusFilter, sort.col, sort.desc]);
 
   React.useEffect(() => {
-    if (currentPage > pagesCount) setCurrentPage(pagesCount);
-  }, [currentPage, pagesCount]);
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount((count) => Math.min(count + BATCH_SIZE, rows.length));
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, rows.length]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
@@ -71,7 +80,11 @@ function ContainerManagement({ onOpenDetail, containers = [] }) {
             { id: "expires", header: "만료", sortingField: "expires", cell: (c) => <span style={{ color: "var(--decs-text-secondary)" }}>{c.expires}</span> },
             { id: "actions", header: "", width: 90, cell: (c) => <Button variant="normal" onClick={() => onOpenDetail(c)}>상세</Button> },
           ]}
-          footer={rows.length > PAGE_SIZE ? <div style={{ display: "flex", justifyContent: "flex-end" }}><Pagination currentPage={currentPage} pagesCount={pagesCount} onChange={setCurrentPage} /></div> : null}
+          footer={rows.length > 0 ? (
+            <div ref={sentinelRef} style={{ display: "flex", justifyContent: "center", color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", minHeight: "1px" }}>
+              {hasMore ? "스크롤하면 더 불러옵니다…" : null}
+            </div>
+          ) : null}
         />
       </Container>
     </div>
