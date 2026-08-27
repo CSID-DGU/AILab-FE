@@ -24,8 +24,7 @@ export const authService = {
   // 이메일 인증번호 발송
   sendEmailVerification: async (email) => {
     try {
-      // POST 요청으로 이메일을 쿼리 파라미터로 전송 (curl과 동일)
-      const response = await apiClient.postWithQuery("/api/auth/email/send", {
+      const response = await apiClient.post("/api/auth/email/send", {
         email,
       });
       return response;
@@ -38,8 +37,7 @@ export const authService = {
   // 이메일 인증번호 검증
   verifyEmailCode: async (email, code) => {
     try {
-      // POST 요청으로 이메일과 코드를 쿼리 파라미터로 전송 (curl과 동일)
-      const response = await apiClient.postWithQuery("/api/auth/email/verify", {
+      const response = await apiClient.post("/api/auth/email/verify", {
         email,
         code,
       });

@@ -126,25 +126,6 @@ class ApiClient {
     });
   }
 
-  // POST 요청에 쿼리 파라미터 사용 (curl과 동일한 방식)
-  async postWithQuery(endpoint, params = {}) {
-    const url = new URL(endpoint, window.location.origin);
-    Object.keys(params).forEach((key) => {
-      if (params[key] !== undefined && params[key] !== null) {
-        url.searchParams.append(key, params[key]);
-      }
-    });
-
-    return this.request(url.pathname + url.search, {
-      method: "POST",
-      headers: {
-        accept: "application/json;charset=UTF-8",
-        // Content-Type은 빈 body일 때 제거
-      },
-      body: "", // 빈 body (curl -d '' 와 동일)
-    });
-  }
-
   async put(endpoint, data = {}) {
     return this.request(endpoint, {
       method: "PUT",
