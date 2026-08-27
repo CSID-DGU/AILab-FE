@@ -125,7 +125,7 @@ function toRequestPayload(form) {
     resourceGroupId: parseInt(form.gpu, 10),
     imageId: parseInt(form.env, 10),
     ubuntuUsername: form.ubuntuUsername,
-    ubuntuPassword: bytesToBase64(new TextEncoder().encode(form.ubuntuPassword)),
+    ubuntuPassword: form.ubuntuPassword,
     // 30083 신청 DTO의 레거시 필수 필드. PVC UI에서는 노출하지 않는다.
     volumeSizeGiB: 20,
     usagePurpose: form.usagePurpose,
@@ -134,12 +134,6 @@ function toRequestPayload(form) {
     ubuntuGids: (form.ubuntuGids ?? []).map((gid) => parseInt(gid, 10)),
     portRequests: form.portRequests ?? [],
   };
-}
-
-function bytesToBase64(bytes) {
-  let binary = "";
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
-  return window.btoa(binary);
 }
 
 export default UserPortalApp;
