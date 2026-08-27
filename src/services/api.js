@@ -119,8 +119,9 @@ class ApiClient {
     });
   }
 
-  async post(endpoint, data = {}) {
+  async post(endpoint, data = {}, options = {}) {
     return this.request(endpoint, {
+      ...options,
       method: "POST",
       body: JSON.stringify(data),
     });
