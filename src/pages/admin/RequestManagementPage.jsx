@@ -40,17 +40,23 @@ const RequestManagementPage = () => {
   const [processingUsername, setProcessingUsername] = useState(null);
   const [provisioningStatus, setProvisioningStatus] = useState(null);
 
-  // 승인 처리 중(Pod 생성 포함)일 때 config-server의 세세한 진행 단계를 폴링해서 보여준다.
+  // 승인 처리 중(Pod 생성 포함)이거나, 이미 PROCESSING 상태인 신청서를 다시 열람 중일 때
+  // config-server의 세세한 진행 단계를 폴링해서 보여준다. 후자는 새로고침/재접속 이후에도
+  // 진행 단계를 확인할 수 있도록 하기 위함이다.
   // 조회 실패는 승인 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
+  const provisioningTargetUsername =
+    processingUsername ||
+    (selectedRequest?.status === "PROCESSING" ? selectedRequest.ubuntu_username : null);
+
   useEffect(() => {
-    if (!processingUsername) {
+    if (!provisioningTargetUsername) {
       setProvisioningStatus(null);
       return;
     }
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await podService.getProvisioningStatus(processingUsername);
+        const res = await podService.getProvisioningStatus(provisioningTargetUsername);
         if (!cancelled) setProvisioningStatus(res?.data ?? null);
       } catch {
         // ignore
@@ -62,7 +68,7 @@ const RequestManagementPage = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [processingUsername]);
+  }, [provisioningTargetUsername]);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -562,6 +568,16 @@ const RequestManagementPage = () => {
                   <div>
                     <StatusIndicator type="pending">
                       관리자 검토 대기 중
+                    </StatusIndicator>
+                  </div>
+                )}
+                {sel.status === "PROCESSING" && (
+                  <div>
+                    <StatusIndicator type="in-progress">
+                      Pod 생성 처리 중
+                      {provisioningStatus?.message
+                        ? ` — ${provisioningStatus.message}`
+                        : ""}
                     </StatusIndicator>
                   </div>
                 )}
