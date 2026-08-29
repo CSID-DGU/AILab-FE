@@ -10,8 +10,10 @@ export const requestService = {
 
   approveRequest: (data) =>
     apiClient.patch("/api/admin/requests/approve", data, {
-      // 계정과 Pod 생성까지 동기 처리되어 백엔드 제한(5분)보다 조금 길게 대기합니다.
-      signal: AbortSignal.timeout(310_000),
+      // 타임아웃은 안쪽 레이어보다 바깥쪽이 더 길어야 한다: config-server(550s)
+      // < admin_be podWebClient(600s) < nginx/ingress(650s) < 여기(프론트).
+      // 짧게 잡으면 백엔드가 아직 정상 처리 중인데 프론트가 먼저 포기해버린다.
+      signal: AbortSignal.timeout(660_000),
     }),
   rejectRequest: (data) => apiClient.patch("/api/admin/requests/reject", data),
 
@@ -35,8 +37,9 @@ export const requestService = {
       nodes,
       ...(minImprovementRatio != null && { minImprovementRatio }),
     }, {
-      // config-server 마이그레이션 API 타임아웃(10분)보다 조금 길게 대기합니다.
-      signal: AbortSignal.timeout(610_000),
+      // nginx/ingress 프록시 타임아웃(650s)보다 길게 잡아야 백엔드가 정상
+      // 처리 중일 때 프론트가 먼저 타임아웃돼버리는 걸 막을 수 있다.
+      signal: AbortSignal.timeout(660_000),
     }),
 
   getGpuTypes: () => apiClient.get("/api/resources/gpu-types"),
