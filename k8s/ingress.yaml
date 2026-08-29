@@ -6,6 +6,12 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # admin_be의 Pod 생성/마이그레이션 동기 처리(최대 600s)가 ingress-nginx 기본
+    # proxy-read-timeout(60s)에 끊기지 않도록 여유 있게 늘린다. (nginx.conf의
+    # 컨테이너 내부 프록시 타임아웃과 반드시 같이 맞춰야 한다.)
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "650"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "650"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "650"
 spec:
   ingressClassName: nginx-ailab
   rules:
