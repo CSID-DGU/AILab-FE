@@ -441,7 +441,7 @@ const RequestManagementPage = () => {
       )}
       {processingRequestId !== null ? (
         <Alert type="info">
-          Pod 생성으로 승인 처리에 최대 5분이 걸릴 수 있습니다. 완료될 때까지 창을 닫거나 다시 클릭하지 마세요.
+          Pod 생성으로 승인 처리에 최대 10분이 걸릴 수 있습니다. 완료될 때까지 창을 닫거나 다시 클릭하지 마세요.
           {provisioningStatus?.message ? ` (현재 단계: ${provisioningStatus.message})` : null}
         </Alert>
       ) : null}
