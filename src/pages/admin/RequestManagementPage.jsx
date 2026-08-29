@@ -47,17 +47,25 @@ const RequestManagementPage = () => {
   const [migrateFormError, setMigrateFormError] = useState(null);
   const [isMigrating, setIsMigrating] = useState(false);
 
+  // 목록에 PROCESSING 상태인 신청서가 있으면(다른 관리자가 처리 중이거나, 내가 승인 처리
+  // 중에 페이지를 나갔다가 새로고침해서 돌아온 경우) processingRequestId가 이번 세션에서
+  // 클릭한 적 없어도 그 신청서 기준으로 상태 배너/폴링을 이어간다.
+  const processingListRequest = requests.find((r) => r.status === "PROCESSING") || null;
+
   // 승인 처리 중(Pod 생성 포함)일 때 config-server의 세세한 진행 단계를 폴링해서 보여준다.
   // 조회 실패는 승인 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
+  const provisioningTargetUsername =
+    processingUsername || processingListRequest?.ubuntu_username || null;
+
   useEffect(() => {
-    if (!processingUsername) {
+    if (!provisioningTargetUsername) {
       setProvisioningStatus(null);
       return;
     }
     let cancelled = false;
     const poll = async () => {
       try {
-        const res = await podService.getProvisioningStatus(processingUsername);
+        const res = await podService.getProvisioningStatus(provisioningTargetUsername);
         if (!cancelled) setProvisioningStatus(res?.data ?? null);
       } catch {
         // ignore
@@ -69,7 +77,7 @@ const RequestManagementPage = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [processingUsername]);
+  }, [provisioningTargetUsername]);
 
   useEffect(() => {
     const fetchRequests = async () => {
@@ -439,9 +447,12 @@ const RequestManagementPage = () => {
           ]}
         />
       )}
-      {processingRequestId !== null ? (
+      {processingRequestId !== null || processingListRequest ? (
         <Alert type="info">
-          Pod 생성으로 승인 처리에 최대 10분이 걸릴 수 있습니다. 완료될 때까지 창을 닫거나 다시 클릭하지 마세요.
+          {processingListRequest && processingRequestId === null
+            ? `${processingListRequest.user_name}님의 신청서가 Pod 생성 처리 중입니다.`
+            : "Pod 생성으로 승인 처리에 최대 10분이 걸릴 수 있습니다."}{" "}
+          중복 클릭해도 안전하지만, 완료 전까지는 같은 신청서에 대한 새 승인 요청이 거부됩니다.
           {provisioningStatus?.message ? ` (현재 단계: ${provisioningStatus.message})` : null}
         </Alert>
       ) : null}
