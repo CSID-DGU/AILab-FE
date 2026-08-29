@@ -30,6 +30,15 @@ export const requestService = {
     }),
   getMyChangeRequests: () => apiClient.get("/api/requests/my/changes"),
 
+  migrateRequest: (requestId, nodes, minImprovementRatio) =>
+    apiClient.post(`/api/admin/requests/${requestId}/migrate`, {
+      nodes,
+      ...(minImprovementRatio != null && { minImprovementRatio }),
+    }, {
+      // config-server 마이그레이션 API 타임아웃(10분)보다 조금 길게 대기합니다.
+      signal: AbortSignal.timeout(610_000),
+    }),
+
   getGpuTypes: () => apiClient.get("/api/resources/gpu-types"),
   getGroups: () => apiClient.get("/api/groups"),
   checkUbuntuUsername: (username) =>
