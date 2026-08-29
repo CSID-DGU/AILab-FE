@@ -210,10 +210,13 @@ const RequestManagementPage = () => {
       console.error("Failed to update request status:", error);
 
       if (error.status === 409) {
+        // 실제 원인은 두 가지다: ① 다른 관리자가 먼저 처리함 ② 본인이 새로고침 후 이미
+        // PROCESSING/처리 완료된 자신의 요청에 다시 클릭한 경우. 서버 응답만으로는 구분할
+        // 수 없으므로 원인을 단정하지 않고 사실만 안내한다.
         setAlert({
           type: "error",
           message:
-            "이 신청서는 이미 다른 관리자에 의해 처리되었습니다. 페이지를 새로고침해주세요.",
+            "처리 상태가 바뀌어 요청을 완료하지 못했습니다. 목록을 새로고침해 현재 상태를 확인해주세요.",
         });
       } else if (error.name === "TimeoutError" || error.name === "AbortError") {
         setAlert({
@@ -242,6 +245,14 @@ const RequestManagementPage = () => {
   };
 
   const promptDeny = (request) => {
+    // PROCESSING 상태는 Pod 생성이 이미 진행 중일 수 있다 — 진행 단계가 멈춘 것처럼
+    // 보인다고 오인해 실수로 취소하는 것을 막기 위해 별도로 확인한다.
+    if (request.status === "PROCESSING") {
+      const proceed = confirm(
+        "이 신청서는 현재 Pod 생성 처리 중입니다. 거절하면 진행 중인 계정/Pod가 정리됩니다. 계속하시겠습니까?"
+      );
+      if (!proceed) return;
+    }
     const comment = prompt("거절 사유를 입력하세요:", "거절되었습니다.");
     if (comment !== null) {
       handleStatusUpdate(request, "DENIED", comment || "거절되었습니다.");
