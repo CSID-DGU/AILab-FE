@@ -10,10 +10,10 @@ export const requestService = {
 
   approveRequest: (data) =>
     apiClient.patch("/api/admin/requests/approve", data, {
-      // 타임아웃은 안쪽 레이어보다 바깥쪽이 더 길어야 한다: config-server(550s)
-      // < admin_be podWebClient(600s) < nginx/ingress(650s) < 여기(프론트).
+      // 타임아웃 체인: config-server(500s) < admin_be(550s) < nginx/ingress(570s)
+      // < 여기(프론트, 600s=10분 — 사용자에게 보여주는 안내 문구와도 일치시킨다).
       // 짧게 잡으면 백엔드가 아직 정상 처리 중인데 프론트가 먼저 포기해버린다.
-      signal: AbortSignal.timeout(660_000),
+      signal: AbortSignal.timeout(600_000),
     }),
   rejectRequest: (data) => apiClient.patch("/api/admin/requests/reject", data),
 
@@ -37,9 +37,9 @@ export const requestService = {
       nodes,
       ...(minImprovementRatio != null && { minImprovementRatio }),
     }, {
-      // nginx/ingress 프록시 타임아웃(650s)보다 길게 잡아야 백엔드가 정상
+      // nginx/ingress 프록시 타임아웃(570s)보다 길게 잡아야 백엔드가 정상
       // 처리 중일 때 프론트가 먼저 타임아웃돼버리는 걸 막을 수 있다.
-      signal: AbortSignal.timeout(660_000),
+      signal: AbortSignal.timeout(600_000),
     }),
 
   getGpuTypes: () => apiClient.get("/api/resources/gpu-types"),
