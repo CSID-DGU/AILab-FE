@@ -134,7 +134,13 @@ const RequestManagementPage = () => {
   const handleStatusUpdate = async (request, newStatus, comment = "") => {
     if (processingRequestId !== null) return;
     setProcessingRequestId(request.request_id);
-    if (newStatus === "FULFILLED") setProcessingUsername(request.ubuntu_username);
+    if (newStatus === "FULFILLED") {
+      // 같은 사용자를 재승인할 때는 provisioningTargetUsername이 안 바뀌어서
+      // 폴링 useEffect가 재실행되지 않는다 — 이전 실패 시도의 진행 단계 메시지가
+      // 첫 폴링(2초) 전까지 그대로 남아 보이는 걸 막기 위해 여기서 바로 지운다.
+      setProvisioningStatus(null);
+      setProcessingUsername(request.ubuntu_username);
+    }
     try {
       let response;
 
