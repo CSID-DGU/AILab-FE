@@ -117,7 +117,7 @@ const ImageManagementPage = () => {
       id: 'imageName',
       header: '이미지 이름',
       cell: (image) => (
-        <span className="font-medium text-(--decs-text-heading)">{image.imageName}</span>
+        <span style={{ fontWeight: 600, color: 'var(--decs-text-heading)' }}>{image.imageName}</span>
       ),
     },
     {
@@ -135,13 +135,13 @@ const ImageManagementPage = () => {
       id: 'createdAt',
       header: '생성일',
       cell: (image) => (
-        <span className="text-(--decs-text-secondary)">{formatDate(image.createdAt)}</span>
+        <span style={{ color: 'var(--decs-text-secondary)' }}>{formatDate(image.createdAt)}</span>
       ),
     },
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--decs-space-l)' }}>
       <Header
         variant="h1"
         description="컨테이너 생성에 사용할 도커 이미지를 관리합니다."
@@ -166,14 +166,14 @@ const ImageManagementPage = () => {
 
       {showCreateForm && (
         <Container header={<Header variant="h2">새 이미지 생성</Header>}>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="이미지 이름" htmlFor="image-name">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--decs-space-m)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--decs-space-m)' }}>
+              <FormField label="이미지 이름" htmlFor="image-name" constraintText="예: dguailab/decs (도커 레포지토리 경로, 이미지 ID 아님)">
                 <Input
                   id="image-name"
                   value={formData.imageName}
                   onChange={handleFieldChange('imageName')}
-                  placeholder="예: cuda"
+                  placeholder="예: dguailab/decs"
                 />
               </FormField>
               <FormField label="이미지 버전" htmlFor="image-version">
@@ -201,7 +201,7 @@ const ImageManagementPage = () => {
                 placeholder="이미지에 대한 설명을 입력하세요"
               />
             </FormField>
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 'var(--decs-space-s)' }}>
               <Button variant="primary" loading={loading} onClick={handleCreateImage}>
                 생성
               </Button>

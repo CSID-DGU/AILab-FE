@@ -151,12 +151,12 @@ const UserManagementPage = () => {
       header: "사용자",
       minWidth: "180px",
       cell: (user) => (
-        <div className="flex items-center justify-between gap-2">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--decs-space-xs)" }}>
           <div>
-            <div className="font-medium text-(--decs-text-heading)">
+            <div style={{ fontWeight: 600, color: "var(--decs-text-heading)" }}>
               {user.name}
             </div>
-            <div className="text-(--decs-text-secondary)">{user.email}</div>
+            <div style={{ color: "var(--decs-text-secondary)" }}>{user.email}</div>
           </div>
           <ButtonDropdown
             trigger="icon"
@@ -218,7 +218,7 @@ const UserManagementPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
       {/* 페이지 헤더 */}
       <Header
         variant="h1"
@@ -241,7 +241,7 @@ const UserManagementPage = () => {
 
       {/* 검색 및 필터 */}
       <Container>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "var(--decs-space-m)" }}>
           <FormField label="검색" htmlFor="user-search">
             <Input
               id="user-search"
