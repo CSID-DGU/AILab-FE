@@ -84,6 +84,65 @@ const UserManagementPage = () => {
     }
   };
 
+  // 사용자 활성/비활성 토글
+  const handleToggleActive = async (user) => {
+    try {
+      const response = user.isActive
+        ? await userService.deactivateUser(user.userId)
+        : await userService.reactivateUser(user.userId);
+
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message: user.isActive
+            ? "사용자를 비활성화했습니다."
+            : "사용자를 재활성화했습니다.",
+        });
+        loadUsers();
+      } else {
+        setAlert({
+          type: "error",
+          message: user.isActive
+            ? "사용자 비활성화에 실패했습니다."
+            : "사용자 재활성화에 실패했습니다.",
+        });
+      }
+    } catch (error) {
+      console.error("사용자 활성 상태 변경 실패:", error);
+      setAlert({
+        type: "error",
+        message: `사용자 활성 상태 변경에 실패했습니다: ${error.message}`,
+      });
+    }
+  };
+
+  // 사용자 권한 토글 (ADMIN <-> USER)
+  const handleToggleRole = async (user) => {
+    const newRole = user.role === "ADMIN" ? "USER" : "ADMIN";
+    try {
+      const response = await userService.changeUserRole(user.userId, newRole);
+
+      if (response.status === 200) {
+        setAlert({
+          type: "success",
+          message: "사용자 권한을 변경했습니다.",
+        });
+        loadUsers();
+      } else {
+        setAlert({
+          type: "error",
+          message: "사용자 권한 변경에 실패했습니다.",
+        });
+      }
+    } catch (error) {
+      console.error("사용자 권한 변경 실패:", error);
+      setAlert({
+        type: "error",
+        message: `사용자 권한 변경에 실패했습니다: ${error.message}`,
+      });
+    }
+  };
+
   // 필터링된 사용자 목록
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -177,12 +236,12 @@ const UserManagementPage = () => {
             {
               id: "toggle-active",
               text: user.isActive ? "비활성화" : "활성화",
-              disabled: true, // 백엔드 API 미구현
+              onClick: () => handleToggleActive(user),
             },
             {
               id: "toggle-role",
               text: user.role === "ADMIN" ? "사용자로 변경" : "관리자로 변경",
-              disabled: true, // 백엔드 API 미구현
+              onClick: () => handleToggleRole(user),
             },
             {
               id: "delete",
