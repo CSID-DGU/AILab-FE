@@ -108,14 +108,18 @@ const MessageTemplatePage = () => {
       id: 'key',
       header: '키',
       cell: (t) => (
-        <code className="font-(family-name:--decs-font-mono) text-(--decs-text-body)">{t.key}</code>
+        <code style={{ fontFamily: 'var(--decs-font-mono)', color: 'var(--decs-text-body)' }}>{t.key}</code>
       ),
     },
     {
       id: 'currentValue',
       header: '현재 값',
       minWidth: '280px',
-      cell: (t) => <p title={t.currentValue} className="truncate max-w-md m-0">{t.currentValue}</p>,
+      cell: (t) => (
+        <p title={t.currentValue} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '28rem', margin: 0 }}>
+          {t.currentValue}
+        </p>
+      ),
     },
     {
       id: 'status',
@@ -132,7 +136,7 @@ const MessageTemplatePage = () => {
       header: '작업',
       width: '180px',
       cell: (t) => (
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 'var(--decs-space-xs)' }}>
           <Button
             iconName="pencil-square"
             onClick={() => setEditing({ key: t.key, value: t.currentValue, defaultValue: t.defaultValue })}
@@ -150,7 +154,7 @@ const MessageTemplatePage = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--decs-space-l)' }}>
       <Header variant="h1" description="알림 메시지 템플릿을 관리합니다.">
         양식 관리
       </Header>
@@ -163,13 +167,13 @@ const MessageTemplatePage = () => {
 
       {loading ? (
         <Container>
-          <div className="flex justify-center py-12">
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--decs-space-xl) 0' }}>
             <StatusIndicator type="in-progress">불러오는 중</StatusIndicator>
           </div>
         </Container>
       ) : templates.length === 0 ? (
         <Container>
-          <div className="text-center py-12 text-(--decs-text-secondary)">
+          <div style={{ textAlign: 'center', padding: 'var(--decs-space-xl) 0', color: 'var(--decs-text-secondary)' }}>
             등록된 메시지 템플릿이 없습니다.
           </div>
         </Container>
@@ -212,15 +216,15 @@ const MessageTemplatePage = () => {
         }
       >
         {editing && (
-          <div className="space-y-4">
-            <code className="block font-(family-name:--decs-font-mono) text-(--decs-text-secondary)">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--decs-space-m)' }}>
+            <code style={{ display: 'block', fontFamily: 'var(--decs-font-mono)', color: 'var(--decs-text-secondary)' }}>
               {editing.key}
             </code>
 
             {editing.defaultValue && editing.defaultValue !== editing.value && (
-              <div className="bg-(--decs-surface-sunken) border border-(--decs-border-divider) p-3">
-                <p className="text-(--decs-text-inactive) mb-1 m-0">기본값</p>
-                <p className="text-(--decs-text-body) whitespace-pre-wrap m-0">
+              <div style={{ background: 'var(--decs-surface-sunken)', border: '1px solid var(--decs-border-divider)', padding: 'var(--decs-space-s)' }}>
+                <p style={{ color: 'var(--decs-text-inactive)', marginBottom: 'var(--decs-space-xxs)', marginTop: 0 }}>기본값</p>
+                <p style={{ color: 'var(--decs-text-body)', whiteSpace: 'pre-wrap', margin: 0 }}>
                   {editing.defaultValue}
                 </p>
               </div>
@@ -233,8 +237,16 @@ const MessageTemplatePage = () => {
             >
               <textarea
                 id="template-value"
-                className="w-full border border-(--decs-border-input) bg-(--decs-surface-input) text-(--decs-text-body) p-3 focus:outline-none focus:border-(--decs-border-focus) focus:ring-1 focus:ring-(--decs-border-focus)"
-                style={{ borderRadius: 'var(--decs-radius-input)', fontFamily: 'var(--decs-font-base)', fontSize: 'var(--decs-fs-body-m)' }}
+                style={{
+                  width: '100%', boxSizing: 'border-box', resize: 'vertical',
+                  border: '1px solid var(--decs-border-input)',
+                  background: 'var(--decs-surface-input)',
+                  color: 'var(--decs-text-body)',
+                  padding: 'var(--decs-space-s)',
+                  borderRadius: 'var(--decs-radius-input)',
+                  fontFamily: 'var(--decs-font-base)',
+                  fontSize: 'var(--decs-fs-body-m)',
+                }}
                 rows={5}
                 value={editing.value}
                 onChange={e => setEditing({ ...editing, value: e.target.value })}
@@ -265,8 +277,8 @@ const MessageTemplatePage = () => {
         }
       >
         {resetTarget && (
-          <p className="m-0">
-            <code className="font-(family-name:--decs-font-mono)">{resetTarget}</code>
+          <p style={{ margin: 0 }}>
+            <code style={{ fontFamily: 'var(--decs-font-mono)' }}>{resetTarget}</code>
             의 수정된 값이 삭제되고 기본값으로 복원됩니다.
           </p>
         )}

@@ -291,7 +291,7 @@ const RequestManagementPage = () => {
       cell: (r) => (
         <div>
           <div>{r.user_name}</div>
-          <div className="text-(--decs-text-secondary)">
+          <div style={{ color: "var(--decs-text-secondary)" }}>
             {r.student_id} · {r.department}
           </div>
         </div>
@@ -322,7 +322,7 @@ const RequestManagementPage = () => {
       header: "작업",
       minWidth: "180px",
       cell: (r) => (
-        <div className="flex items-center gap-3">
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-s)" }}>
           <Button variant="inline-link" onClick={() => setSelectedRequest(r)}>
             상세
           </Button>
@@ -348,7 +348,7 @@ const RequestManagementPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 256 }}>
         <StatusIndicator type="loading">
           신청서 목록을 불러오는 중...
         </StatusIndicator>
@@ -359,7 +359,7 @@ const RequestManagementPage = () => {
   const sel = selectedRequest;
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
       {alert && (
         <Flashbar
           items={[
@@ -453,7 +453,7 @@ const RequestManagementPage = () => {
             </>
           }
         >
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
             <div>{renderStatus(sel.status)}</div>
 
             <div>
@@ -526,16 +526,16 @@ const RequestManagementPage = () => {
                     : []),
                 ]}
               />
-              <div className="mt-4">
-                <div className="text-(--decs-text-inactive) mb-1">사용 목적</div>
-                <div className="bg-(--decs-surface-sunken) p-3">
+              <div style={{ marginTop: "var(--decs-space-m)" }}>
+                <div style={{ color: "var(--decs-text-inactive)", marginBottom: "var(--decs-space-xxs)" }}>사용 목적</div>
+                <div style={{ background: "var(--decs-surface-sunken)", padding: "var(--decs-space-s)" }}>
                   {sel.usage_purpose}
                 </div>
               </div>
               {sel.form_answers &&
                 Object.keys(sel.form_answers).length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-(--decs-text-inactive) mb-1">
+                  <div style={{ marginTop: "var(--decs-space-m)" }}>
+                    <div style={{ color: "var(--decs-text-inactive)", marginBottom: "var(--decs-space-xxs)" }}>
                       추가 정보
                     </div>
                     <KeyValuePairs
@@ -554,7 +554,7 @@ const RequestManagementPage = () => {
             {sel.port_mappings && sel.port_mappings.length > 0 && (
               <div>
                 <Header variant="h3">외부 포트</Header>
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--decs-space-xs)", marginTop: "var(--decs-space-xs)" }}>
                   {sel.port_mappings.map((port, index) => (
                     <Badge
                       key={index}
@@ -570,7 +570,7 @@ const RequestManagementPage = () => {
 
             <div>
               <Header variant="h3">처리 이력</Header>
-              <div className="space-y-2 mt-2">
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-xs)", marginTop: "var(--decs-space-xs)" }}>
                 <StatusIndicator type="info">
                   신청 제출: {formatDate(sel.created_at)}
                 </StatusIndicator>
@@ -597,7 +597,7 @@ const RequestManagementPage = () => {
                 )}
               </div>
               {sel.admin_comment && (
-                <div className="mt-3">
+                <div style={{ marginTop: "var(--decs-space-s)" }}>
                   <Alert
                     type={sel.status === "DENIED" ? "error" : "info"}
                     header="관리자 의견"
