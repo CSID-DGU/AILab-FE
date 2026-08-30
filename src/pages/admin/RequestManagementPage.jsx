@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Container,
   Header,
@@ -13,7 +13,16 @@ import {
   KeyValuePairs,
   FormField,
   Input,
+  Select,
 } from "../../design-system";
+
+const PAGE_BATCH_SIZE = 20;
+const PERIOD_OPTIONS = [
+  { value: "1M", label: "최근 1개월", months: 1 },
+  { value: "3M", label: "최근 3개월", months: 3 },
+  { value: "6M", label: "최근 6개월", months: 6 },
+  { value: "ALL", label: "전체 기간", months: null },
+];
 import { requestService } from "../../services/requestService";
 import { podService } from "../../services/podService";
 import { mapRequestDtoToUiModel } from "../../utils/requestMapper";
@@ -36,7 +45,10 @@ const RequestManagementPage = () => {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState("ALL"); // ALL, PENDING, FULFILLED, DENIED
+  const [filter, setFilter] = useState("PENDING"); // PENDING, FULFILLED, DENIED, DELETED
+  const [period, setPeriod] = useState("3M"); // 1M, 3M, 6M, ALL
+  const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
+  const sentinelRef = useRef(null);
   const [alert, setAlert] = useState(null);
   const [processingRequestId, setProcessingRequestId] = useState(null);
   const [processingUsername, setProcessingUsername] = useState(null);
@@ -111,28 +123,48 @@ const RequestManagementPage = () => {
     fetchRequests();
   }, []);
 
-  const filteredRequests = requests
-    .filter((request) => {
-      if (filter === "ALL") return true;
-      return request.status === filter;
-    })
-    .sort((a, b) => {
-      // Sort by priority: PENDING > PROCESSING > FULFILLED > DENIED > DELETED
-      const statusPriority = { PENDING: 1, PROCESSING: 2, FULFILLED: 3, DENIED: 4, DELETED: 5 };
-      if (statusPriority[a.status] !== statusPriority[b.status]) {
-        return statusPriority[a.status] - statusPriority[b.status];
-      }
-      // Within same status, sort by date (newest first)
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
+  const periodCutoff = (() => {
+    const months = PERIOD_OPTIONS.find((p) => p.value === period)?.months;
+    if (!months) return null;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - months);
+    return cutoff;
+  })();
+
+  // 상태 탭 개수는 선택된 기간 내에서 집계 — 기간 필터와 별개로 통계가 헷갈리지 않도록
+  const requestsInPeriod = periodCutoff
+    ? requests.filter((r) => new Date(r.created_at) >= periodCutoff)
+    : requests;
+
+  const filteredRequests = requestsInPeriod
+    .filter((request) => request.status === filter)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const statusCounts = {
-    ALL: requests.length,
-    PENDING: requests.filter((r) => r.status === "PENDING").length,
-    FULFILLED: requests.filter((r) => r.status === "FULFILLED").length,
-    DENIED: requests.filter((r) => r.status === "DENIED").length,
-    DELETED: requests.filter((r) => r.status === "DELETED").length,
+    PENDING: requestsInPeriod.filter((r) => r.status === "PENDING").length,
+    FULFILLED: requestsInPeriod.filter((r) => r.status === "FULFILLED").length,
+    DENIED: requestsInPeriod.filter((r) => r.status === "DENIED").length,
+    DELETED: requestsInPeriod.filter((r) => r.status === "DELETED").length,
   };
+
+  const hasMore = visibleCount < filteredRequests.length;
+  const pageRequests = filteredRequests.slice(0, visibleCount);
+
+  useEffect(() => {
+    setVisibleCount(PAGE_BATCH_SIZE);
+  }, [filter, period]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setVisibleCount((count) => Math.min(count + PAGE_BATCH_SIZE, filteredRequests.length));
+      }
+    }, { rootMargin: "200px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, filteredRequests.length]);
 
   const handleStatusUpdate = async (request, newStatus, comment = "") => {
     if (processingRequestId !== null) return;
@@ -264,18 +296,15 @@ const RequestManagementPage = () => {
     });
   };
 
-  const emptyText =
-    filter === "ALL"
-      ? "아직 제출된 신청서가 없습니다."
-      : `${
-          filter === "PENDING"
-            ? "대기중인"
-            : filter === "FULFILLED"
-            ? "승인된"
-            : filter === "DENIED"
-            ? "거절된"
-            : "삭제된"
-        } 신청서가 없습니다. 다른 상태의 신청서를 확인해보세요.`;
+  const emptyText = `${
+    filter === "PENDING"
+      ? "대기중인"
+      : filter === "FULFILLED"
+      ? "승인된"
+      : filter === "DENIED"
+      ? "거절된"
+      : "삭제된"
+  } 신청서가 없습니다. 다른 상태나 기간을 확인해보세요.`;
 
   const columns = [
     {
@@ -390,26 +419,34 @@ const RequestManagementPage = () => {
         신청서 관리
       </Header>
 
-      <Tabs
-        tabs={[
-          { key: "ALL", label: "전체" },
-          { key: "PENDING", label: "대기중" },
-          { key: "FULFILLED", label: "승인됨" },
-          { key: "DENIED", label: "거절됨" },
-          { key: "DELETED", label: "삭제됨" },
-        ].map((tab) => ({
-          id: tab.key,
-          label: `${tab.label} (${statusCounts[tab.key]})`,
-        }))}
-        activeTabId={filter}
-        onChange={setFilter}
-      />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--decs-space-m)", flexWrap: "wrap" }}>
+        <Tabs
+          tabs={[
+            { key: "PENDING", label: "대기중" },
+            { key: "FULFILLED", label: "승인됨" },
+            { key: "DENIED", label: "거절됨" },
+            { key: "DELETED", label: "삭제됨" },
+          ].map((tab) => ({
+            id: tab.key,
+            label: `${tab.label} (${statusCounts[tab.key]})`,
+          }))}
+          activeTabId={filter}
+          onChange={setFilter}
+        />
+        <div style={{ width: "160px" }}>
+          <Select
+            selectedValue={period}
+            onChange={setPeriod}
+            options={PERIOD_OPTIONS.map((p) => ({ value: p.value, label: p.label }))}
+          />
+        </div>
+      </div>
 
       <Container disablePadding>
         <Table
           density="compact"
           columns={columns}
-          items={filteredRequests}
+          items={pageRequests}
           trackBy="request_id"
           header={
             <Header variant="h2" counter={`(${filteredRequests.length})`}>
@@ -417,6 +454,11 @@ const RequestManagementPage = () => {
             </Header>
           }
           empty={emptyText}
+          footer={filteredRequests.length > 0 ? (
+            <div ref={sentinelRef} style={{ display: "flex", justifyContent: "center", color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", minHeight: "1px" }}>
+              {hasMore ? "스크롤하면 더 불러옵니다…" : null}
+            </div>
+          ) : null}
         />
       </Container>
 
