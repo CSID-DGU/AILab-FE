@@ -74,7 +74,7 @@ function AdminConsoleApp() {
         <Routes>
           <Route index element={<AdminDashboard onOpenContainers={() => navigate("/admin/containers")} containers={containers ?? []} users={users ?? []} />} />
           <Route path="containers" element={<ContainerManagement onOpenDetail={(c) => navigate(`/admin/containers/${c.id}`)} containers={containers ?? []} />} />
-          <Route path="containers/:containerId" element={<ContainerDetailRoute containers={containers ?? []} />} />
+          <Route path="containers/:containerId" element={<ContainerDetailRoute containers={containers ?? []} onRefetch={refetch} />} />
           <Route path="requests" element={<RequestManagementPage />} />
           <Route path="change-requests" element={<ChangeRequestManagementPage />} />
           <Route path="users" element={<UserManagementPage />} />
@@ -87,11 +87,11 @@ function AdminConsoleApp() {
   );
 }
 
-function ContainerDetailRoute({ containers }) {
+function ContainerDetailRoute({ containers, onRefetch }) {
   const { containerId } = useParams();
   const navigate = useNavigate();
   const item = containers.find((container) => String(container.id) === containerId);
-  return <ContainerDetail item={item} onBack={() => navigate("/admin/containers")} />;
+  return <ContainerDetail item={item} onBack={() => navigate("/admin/containers")} onRefetch={onRefetch} />;
 }
 
 function getActiveHref(pathname) {

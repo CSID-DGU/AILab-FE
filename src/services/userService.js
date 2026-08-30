@@ -31,6 +31,20 @@ class UserService {
     }
   }
 
+  // 우분투 계정(컨테이너) 단독 삭제
+  async deleteUbuntuAccount(username) {
+    try {
+      const response = await apiClient.request(`/api/admin/users/ubuntu/${username}`, {
+        method: "DELETE",
+      });
+
+      return response;
+    } catch (error) {
+      console.error("컨테이너 삭제 실패:", error);
+      throw error;
+    }
+  }
+
   // 사용자 임시 비활성화 (계정/컨테이너는 유지, 로그인만 차단)
   async deactivateUser(userId) {
     try {
