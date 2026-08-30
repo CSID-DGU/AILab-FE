@@ -7,7 +7,7 @@ import { Button } from "./Button.jsx";
  * per-row action menus in admin tables (Restart / Stop / Logs / Delete).
  * Items with variant "danger" render in the error color.
  */
-export function ButtonDropdown({ items = [], children = "작업", variant = "normal", onItemClick, style }) {
+export function ButtonDropdown({ items = [], children = "작업", variant = "normal", trigger = "label", ariaLabel, onItemClick, style }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
 
@@ -19,9 +19,18 @@ export function ButtonDropdown({ items = [], children = "작업", variant = "nor
 
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
-      <Button variant={variant} iconName="chevron-down" iconAlign="right" onClick={() => setOpen((o) => !o)}>
-        {children}
-      </Button>
+      {trigger === "icon" ? (
+        <Button
+          variant="icon"
+          iconName="ellipsis-vertical"
+          ariaLabel={ariaLabel ?? (typeof children === "string" ? children : "작업")}
+          onClick={() => setOpen((o) => !o)}
+        />
+      ) : (
+        <Button variant={variant} iconName="chevron-down" iconAlign="right" onClick={() => setOpen((o) => !o)}>
+          {children}
+        </Button>
+      )}
       {open ? (
         <div
           role="menu"

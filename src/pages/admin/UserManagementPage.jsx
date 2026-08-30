@@ -10,7 +10,6 @@ import {
   Header,
   Input,
   KeyValuePairs,
-  Modal,
   Select,
   StatusIndicator,
   Table,
@@ -23,7 +22,6 @@ const UserManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
-  const [deleteTarget, setDeleteTarget] = useState(null); // { userId, name }
 
   // 사용자 목록 로드
   const loadUsers = async () => {
@@ -54,33 +52,6 @@ const UserManagementPage = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // 사용자 삭제 (확인은 Modal에서 처리)
-  const handleDeleteUser = async (userId) => {
-    setDeleteTarget(null);
-    try {
-      const response = await userService.deleteUser(userId);
-
-      if (response.status === 200) {
-        setAlert({
-          type: "success",
-          message: "사용자가 성공적으로 삭제되었습니다.",
-        });
-        loadUsers(); // 목록 새로고침
-      } else {
-        setAlert({
-          type: "error",
-          message: "사용자 삭제에 실패했습니다.",
-        });
-      }
-    } catch (error) {
-      console.error("사용자 삭제 실패:", error);
-      setAlert({
-        type: "error",
-        message: "사용자 삭제에 실패했습니다.",
-      });
     }
   };
 
@@ -180,11 +151,29 @@ const UserManagementPage = () => {
       header: "사용자",
       minWidth: "180px",
       cell: (user) => (
-        <div>
-          <div className="font-medium text-(--decs-text-heading)">
-            {user.name}
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <div className="font-medium text-(--decs-text-heading)">
+              {user.name}
+            </div>
+            <div className="text-(--decs-text-secondary)">{user.email}</div>
           </div>
-          <div className="text-(--decs-text-secondary)">{user.email}</div>
+          <ButtonDropdown
+            trigger="icon"
+            ariaLabel={`${user.name} 관리`}
+            items={[
+              {
+                id: "toggle-active",
+                text: user.isActive ? "비활성화" : "활성화",
+                onClick: () => handleToggleActive(user),
+              },
+              {
+                id: "toggle-role",
+                text: user.role === "ADMIN" ? "사용자로 변경" : "관리자로 변경",
+                onClick: () => handleToggleRole(user),
+              },
+            ]}
+          />
         </div>
       ),
     },
@@ -225,37 +214,6 @@ const UserManagementPage = () => {
       id: "createdAt",
       header: "가입일",
       cell: (user) => formatDate(user.createdAt),
-    },
-    {
-      id: "actions",
-      header: "작업",
-      width: "110px",
-      cell: (user) => (
-        <ButtonDropdown
-          items={[
-            {
-              id: "toggle-active",
-              text: user.isActive ? "비활성화" : "활성화",
-              onClick: () => handleToggleActive(user),
-            },
-            {
-              id: "toggle-role",
-              text: user.role === "ADMIN" ? "사용자로 변경" : "관리자로 변경",
-              onClick: () => handleToggleRole(user),
-            },
-            {
-              id: "delete",
-              text: "삭제",
-              iconName: "trash",
-              variant: "danger",
-              onClick: () =>
-                setDeleteTarget({ userId: user.userId, name: user.name }),
-            },
-          ]}
-        >
-          작업
-        </ButtonDropdown>
-      ),
     },
   ];
 
@@ -358,36 +316,6 @@ const UserManagementPage = () => {
           ]}
         />
       </Container>
-
-      {/* 삭제 확인 */}
-      <Modal
-        visible={!!deleteTarget}
-        onDismiss={() => setDeleteTarget(null)}
-        header="사용자 삭제"
-        size="small"
-        footer={
-          <>
-            <Button onClick={() => setDeleteTarget(null)}>취소</Button>
-            <Button
-              variant="primary"
-              style={{
-                background: "var(--decs-status-error)",
-                color: "#fff",
-              }}
-              onClick={() => handleDeleteUser(deleteTarget.userId)}
-            >
-              삭제
-            </Button>
-          </>
-        }
-      >
-        {deleteTarget && (
-          <p>
-            사용자 &quot;{deleteTarget.name}&quot;이(가) 영구적으로 삭제됩니다.
-            이 작업은 되돌릴 수 없습니다.
-          </p>
-        )}
-      </Modal>
     </div>
   );
 };
