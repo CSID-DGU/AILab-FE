@@ -22,9 +22,16 @@ export function ProgressBar({ value = 0, status = "in-progress", label, descript
         </div>
       ) : null}
       {done ? (
-        <div style={{ fontSize: "var(--decs-fs-body-m)", color: FILL[status] }}>{resultText}</div>
+        <div role="status" style={{ fontSize: "var(--decs-fs-body-m)", color: FILL[status] }}>{resultText}</div>
       ) : (
-        <div style={{ height: "4px", borderRadius: "9999px", background: "var(--decs-grey-200)", overflow: "hidden" }}>
+        <div
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={label || description || "진행률"}
+          style={{ height: "4px", borderRadius: "9999px", background: "var(--decs-grey-200)", overflow: "hidden" }}
+        >
           <div style={{ width: pct + "%", height: "100%", background: FILL[status], borderRadius: "9999px", transition: "width var(--decs-motion-slow) var(--decs-easing)" }} />
         </div>
       )}

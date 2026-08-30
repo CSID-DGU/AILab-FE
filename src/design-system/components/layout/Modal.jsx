@@ -6,7 +6,21 @@ import { Icon } from "../icons/Icon.jsx";
  * actions (delete container, release volume) MUST go through a Modal confirm.
  * Pass footer actions via `footer` (usually Cancel + primary/danger button).
  */
+let modalIdCounter = 0;
+
 export function Modal({ visible, onDismiss, header, children, footer, size = "medium", style }) {
+  const titleId = React.useRef(`decs-modal-title-${++modalIdCounter}`).current;
+  const dialogRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!visible) return;
+    // 열릴 때 포커스를 다이얼로그로 옮기고, 닫힐 때까지 Escape로 닫을 수 있게 함
+    dialogRef.current?.focus();
+    const onKeyDown = (e) => { if (e.key === "Escape") onDismiss?.(); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [visible, onDismiss]);
+
   if (!visible) return null;
   const widths = { small: "400px", medium: "600px", large: "800px" };
   return (
@@ -21,8 +35,11 @@ export function Modal({ visible, onDismiss, header, children, footer, size = "me
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         style={{
           width: widths[size] || widths.medium, maxWidth: "100%", maxHeight: "80vh",
           display: "flex", flexDirection: "column",
@@ -31,7 +48,7 @@ export function Modal({ visible, onDismiss, header, children, footer, size = "me
         }}
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: "var(--decs-space-m)", padding: "var(--decs-space-xl) var(--decs-space-xl) var(--decs-space-m)" }}>
-          <h2 style={{ flex: 1, margin: 0, fontSize: "var(--decs-fs-heading-l)", lineHeight: "var(--decs-lh-heading-l)", fontWeight: "var(--decs-fw-bold)", color: "var(--decs-text-heading)" }}>{header}</h2>
+          <h2 id={titleId} style={{ flex: 1, margin: 0, fontSize: "var(--decs-fs-heading-l)", lineHeight: "var(--decs-lh-heading-l)", fontWeight: "var(--decs-fw-bold)", color: "var(--decs-text-heading)" }}>{header}</h2>
           <button onClick={onDismiss} aria-label="Close" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--decs-text-secondary)", display: "inline-flex", padding: "var(--decs-space-xs)" }}>
             <Icon name="x-mark" size={18} />
           </button>
