@@ -39,6 +39,6 @@ export default function LoginPage({ onLogin }) {
         </div>
       </div>
     </main>
-    <div className="hidden lg:block relative w-0 flex-1"><img className="absolute inset-0 h-full w-full object-cover" src="/dongguk_university_picture_1.jpg" alt="동국대학교" /><div className="absolute inset-0 bg-brand-500 opacity-20" /></div>
+    <div className="hidden lg:block relative w-0 flex-1"><picture><source type="image/webp" srcSet="/dongguk_university_picture_1.webp" /><img className="absolute inset-0 h-full w-full object-cover" src="/dongguk_university_picture_1.jpg" alt="동국대학교" fetchPriority="high" /></picture><div className="absolute inset-0 bg-brand-500 opacity-20" /></div>
   </div>;
 }
