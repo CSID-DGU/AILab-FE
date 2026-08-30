@@ -33,10 +33,11 @@ export function StatusIndicator({ type = "info", children, iconSize = 16, style 
         fontFamily: "var(--decs-font-base)",
         fontSize: "var(--decs-fs-body-m)",
         lineHeight: "var(--decs-lh-body-m)",
+        whiteSpace: "nowrap",
         ...style,
       }}
     >
-      <span style={cfg.spin ? { display: "inline-flex", animation: "decs-spin 1s linear infinite" } : { display: "inline-flex" }}>
+      <span style={cfg.spin ? { display: "inline-flex", flexShrink: 0, animation: "decs-spin 1s linear infinite" } : { display: "inline-flex", flexShrink: 0 }}>
         <Icon name={cfg.icon} size={iconSize} />
       </span>
       <span style={{ color: "var(--decs-text-body)" }}>{statusKey ? t(`status.${statusKey}`) : children}</span>
