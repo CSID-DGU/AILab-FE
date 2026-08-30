@@ -6,13 +6,16 @@ import {
 } from "../../../design-system";
 import { requestService } from "../../../services/requestService";
 import userService from "../../../services/userService";
+import { nodeService } from "../../../services/nodeService";
 
 function ContainerDetail({ item, onBack, onRefetch }) {
   const c = item;
 
   const [alert, setAlert] = useState(null);
   const [migrateOpen, setMigrateOpen] = useState(false);
-  const [migrateNodesInput, setMigrateNodesInput] = useState("");
+  const [availableNodes, setAvailableNodes] = useState([]);
+  const [nodesLoading, setNodesLoading] = useState(false);
+  const [selectedNodes, setSelectedNodes] = useState([]);
   const [migrateRatioInput, setMigrateRatioInput] = useState("");
   const [migrateFormError, setMigrateFormError] = useState(null);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -34,11 +37,21 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     );
   }
 
-  const openMigrate = () => {
-    setMigrateNodesInput("");
+  const openMigrate = async () => {
+    setSelectedNodes(c.node && c.node !== "—" ? [c.node] : []);
     setMigrateRatioInput("");
     setMigrateFormError(null);
     setMigrateOpen(true);
+    setNodesLoading(true);
+    try {
+      const response = await nodeService.getAllNodes();
+      setAvailableNodes(response.data?.data ?? response.data ?? []);
+    } catch (error) {
+      console.error("Failed to load nodes:", error);
+      setMigrateFormError("노드 목록을 불러오지 못했습니다.");
+    } finally {
+      setNodesLoading(false);
+    }
   };
 
   const closeMigrate = () => {
@@ -46,14 +59,17 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     setMigrateOpen(false);
   };
 
+  const toggleNode = (nodeId) => {
+    setSelectedNodes((prev) =>
+      prev.includes(nodeId) ? prev.filter((n) => n !== nodeId) : [...prev, nodeId]
+    );
+  };
+
   const submitMigrate = async () => {
-    const nodes = migrateNodesInput
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
+    const nodes = selectedNodes;
 
     if (nodes.length === 0) {
-      setMigrateFormError("후보 노드를 하나 이상 입력하세요.");
+      setMigrateFormError("후보 노드를 하나 이상 선택하세요.");
       return;
     }
 
@@ -204,16 +220,42 @@ function ContainerDetail({ item, onBack, onRefetch }) {
           </Alert>
           <FormField
             label="후보 노드"
-            description="현재 배포된 노드를 포함해 쉼표(,)로 구분해 입력하세요."
-            constraintText="예: farm1, farm2"
+            description="마이그레이션을 시도할 노드를 하나 이상 선택하세요 (현재 노드 포함 가능)."
             errorText={migrateFormError}
           >
-            <Input
-              value={migrateNodesInput}
-              onChange={setMigrateNodesInput}
-              placeholder="farm1, farm2"
-              disabled={isMigrating}
-            />
+            {nodesLoading ? (
+              <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)" }}>노드 목록 불러오는 중...</div>
+            ) : availableNodes.length === 0 ? (
+              <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)" }}>사용 가능한 노드가 없습니다.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-xs)", maxHeight: 220, overflowY: "auto" }}>
+                {availableNodes.map((node) => (
+                  <label
+                    key={node.nodeId}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "var(--decs-space-xs)",
+                      padding: "var(--decs-space-xs) var(--decs-space-s)",
+                      border: "1px solid var(--decs-border-container)",
+                      borderRadius: "var(--decs-radius-input)",
+                      background: node.nodeId === c.node ? "var(--decs-surface-sunken)" : "transparent",
+                      cursor: isMigrating ? "default" : "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedNodes.includes(node.nodeId)}
+                      onChange={() => toggleNode(node.nodeId)}
+                      disabled={isMigrating}
+                    />
+                    <span style={{ fontWeight: 600, color: "var(--decs-text-heading)" }}>{node.nodeId}</span>
+                    <span style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)" }}>
+                      {node.resourceGroupName} · GPU {node.numberGpu}
+                      {node.nodeId === c.node ? " · 현재 노드" : ""}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </FormField>
           <FormField label="최소 개선 비율 (선택)" description="생략하면 config-server 기본값을 사용합니다.">
             <Input

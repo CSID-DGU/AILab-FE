@@ -3,8 +3,10 @@
  * Korean text uses Noto Sans KR (matches CSID-DGU/admin_fe). Both from Google Fonts.
  * NOTE (font substitution): Open Sans + Noto Sans KR are loaded from Google Fonts
  * rather than shipped as local binaries. These ARE the real fonts, not a swap.
+ * NOTE (loading): the Google Fonts request itself is a <link> in index.html
+ * (loaded async), not an @import here — an @import inside our own bundled CSS
+ * forces the browser to fetch it serially before rendering anything.
  */
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
   /* Families */
