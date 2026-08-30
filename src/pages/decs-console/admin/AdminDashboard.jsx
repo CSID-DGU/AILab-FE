@@ -11,7 +11,7 @@ function StatCard({ label, value, sub, accent }) {
   );
 }
 
-function AdminDashboard({ onOpenContainers, containers = [], users = [] }) {
+function AdminDashboard({ onOpenContainers, onOpenDetail, containers = [], users = [] }) {
   const running = containers.filter((c) => c.status === "success").length;
   const errored = containers.filter((c) => c.status === "error").length;
   const expiring = containers.filter((c) => c.status !== "stopped" && c.expires !== "—" && c.expires <= "2026-07-11").length;
@@ -48,7 +48,19 @@ function AdminDashboard({ onOpenContainers, containers = [], users = [] }) {
 
         <Container disablePadding header={<Header variant="h2" counter={`(${containers.length})`} actions={<Button variant="link" onClick={onOpenContainers}>전체 보기</Button>}>최근 컨테이너</Header>}>
           <Table density="compact" trackBy="id" items={recentContainers.slice(0, 5)} columns={[
-            { id: "name", header: "이름", cell: (c) => <span style={{ fontWeight: 600 }}>{c.name}</span> },
+            {
+              id: "name",
+              header: "이름",
+              cell: (c) => (
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); onOpenDetail?.(c); }}
+                  style={{ fontWeight: 600, color: "var(--decs-text-link)", textDecoration: "none" }}
+                >
+                  {c.name}
+                </a>
+              ),
+            },
             { id: "user", header: "사용자", cell: (c) => c.user },
             { id: "gpu", header: "리소스 그룹", cell: (c) => <Badge color="brand">{c.gpu}</Badge> },
             { id: "status", header: "상태", cell: (c) => <StatusIndicator type={c.status}>{c.label}</StatusIndicator> },

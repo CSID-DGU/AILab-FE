@@ -10,6 +10,7 @@ function LinkItem({ item, activeHref, onFollow, depth = 0 }) {
   return (
     <a
       href={item.href}
+      aria-current={active ? "page" : undefined}
       onClick={(e) => { if (onFollow) { e.preventDefault(); onFollow(item); } }}
       style={{
         display: "flex", alignItems: "center", gap: "var(--decs-space-xs)",
@@ -33,7 +34,7 @@ function LinkItem({ item, activeHref, onFollow, depth = 0 }) {
 
 export function SideNavigation({ header, items = [], activeHref, onFollow, style }) {
   return (
-    <nav style={{ width: "100%", height: "100%", background: "var(--decs-surface-nav)", borderRight: "1px solid var(--decs-border-divider)", padding: "var(--decs-space-m) var(--decs-space-s)", boxSizing: "border-box", fontFamily: "var(--decs-font-base)", overflowY: "auto", ...style }}>
+    <nav aria-label={header?.text || "주 메뉴"} style={{ width: "100%", height: "100%", background: "var(--decs-surface-nav)", borderRight: "1px solid var(--decs-border-divider)", padding: "var(--decs-space-m) var(--decs-space-s)", boxSizing: "border-box", fontFamily: "var(--decs-font-base)", overflowY: "auto", ...style }}>
       {header ? (
         <div style={{ padding: "0 var(--decs-space-s) var(--decs-space-s)", borderBottom: "1px solid var(--decs-border-divider)", marginBottom: "var(--decs-space-s)" }}>
           <a title={header.text} href={header.href} onClick={(e) => { if (onFollow) { e.preventDefault(); onFollow(header); } }} style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "var(--decs-fs-heading-s)", fontWeight: "var(--decs-fw-bold)", color: "var(--decs-text-heading)", textDecoration: "none" }}>{header.text}</a>
