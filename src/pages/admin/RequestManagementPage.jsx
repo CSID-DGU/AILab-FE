@@ -41,11 +41,6 @@ const RequestManagementPage = () => {
   const [processingRequestId, setProcessingRequestId] = useState(null);
   const [processingUsername, setProcessingUsername] = useState(null);
   const [provisioningStatus, setProvisioningStatus] = useState(null);
-  const [migratingRequest, setMigratingRequest] = useState(null);
-  const [migrateNodesInput, setMigrateNodesInput] = useState("");
-  const [migrateRatioInput, setMigrateRatioInput] = useState("");
-  const [migrateFormError, setMigrateFormError] = useState(null);
-  const [isMigrating, setIsMigrating] = useState(false);
 
   // 목록에 PROCESSING 상태인 신청서가 있으면(다른 관리자가 처리 중이거나, 내가 승인 처리
   // 중에 페이지를 나갔다가 새로고침해서 돌아온 경우) processingRequestId가 이번 세션에서
@@ -259,81 +254,6 @@ const RequestManagementPage = () => {
     }
   };
 
-  const openMigrate = (request) => {
-    setMigratingRequest(request);
-    setMigrateNodesInput("");
-    setMigrateRatioInput("");
-    setMigrateFormError(null);
-  };
-
-  const closeMigrate = () => {
-    if (isMigrating) return;
-    setMigratingRequest(null);
-  };
-
-  const submitMigrate = async () => {
-    const nodes = migrateNodesInput
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
-
-    if (nodes.length === 0) {
-      setMigrateFormError("후보 노드를 하나 이상 입력하세요.");
-      return;
-    }
-
-    let minImprovementRatio;
-    if (migrateRatioInput.trim() !== "") {
-      const parsed = Number(migrateRatioInput.trim());
-      if (Number.isNaN(parsed)) {
-        setMigrateFormError("최소 개선 비율은 숫자로 입력하세요.");
-        return;
-      }
-      minImprovementRatio = parsed;
-    }
-
-    setMigrateFormError(null);
-    setIsMigrating(true);
-    try {
-      const response = await requestService.migrateRequest(
-        migratingRequest.request_id,
-        nodes,
-        minImprovementRatio
-      );
-      const result = response.data?.data ?? response.data;
-
-      if (result?.status === "migrated") {
-        setAlert({
-          type: "success",
-          message: `${migratingRequest.user_name}님의 Pod를 ${result.from} → ${result.to}(으)로 마이그레이션했습니다.${
-            result.old_pod_cleanup === "failed" ? " (기존 Pod 정리는 실패해 수동 확인이 필요합니다.)" : ""
-          }`,
-        });
-      } else {
-        setAlert({
-          type: "info",
-          message: `마이그레이션을 건너뛰었습니다: ${result?.reason ?? "개선 효과가 충분하지 않습니다."}${
-            result?.best_candidate ? ` (최적 후보: ${result.best_candidate})` : ""
-          }`,
-        });
-      }
-      setMigratingRequest(null);
-    } catch (error) {
-      console.error("Failed to migrate pod:", error);
-      if (error.status === 409) {
-        setMigrateFormError("이미 마이그레이션이 진행 중이거나 FULFILLED 상태가 아닙니다.");
-      } else if (error.status === 502) {
-        setMigrateFormError("config-server 마이그레이션 API 호출에 실패했습니다.");
-      } else if (error.name === "TimeoutError" || error.name === "AbortError") {
-        setMigrateFormError("응답 시간이 초과되었습니다. 실제 처리 상태는 목록을 새로고침해 확인해주세요.");
-      } else {
-        setMigrateFormError(error.message || "마이그레이션 요청에 실패했습니다.");
-      }
-    } finally {
-      setIsMigrating(false);
-    }
-  };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("ko-KR", {
       year: "numeric",
@@ -419,11 +339,6 @@ const RequestManagementPage = () => {
               onClick={() => promptDeny(r)}
             >
               거절
-            </Button>
-          )}
-          {r.status === "FULFILLED" && (
-            <Button variant="inline-link" onClick={() => openMigrate(r)}>
-              마이그레이션
             </Button>
           )}
         </div>
@@ -533,11 +448,6 @@ const RequestManagementPage = () => {
               {sel.status === "PENDING" && (
                 <Button variant="primary" disabled={processingRequestId !== null} loading={processingRequestId === sel.request_id} onClick={() => promptApprove(sel)}>
                   승인
-                </Button>
-              )}
-              {sel.status === "FULFILLED" && (
-                <Button variant="primary" onClick={() => openMigrate(sel)}>
-                  마이그레이션
                 </Button>
               )}
             </>
@@ -701,55 +611,6 @@ const RequestManagementPage = () => {
         </Modal>
       )}
 
-      {/* Migrate Modal */}
-      {migratingRequest && (
-        <Modal
-          visible
-          onDismiss={closeMigrate}
-          header={`Pod 마이그레이션 — ${migratingRequest.user_name} (${migratingRequest.ubuntu_username})`}
-          footer={
-            <>
-              <Button variant="normal" disabled={isMigrating} onClick={closeMigrate}>
-                취소
-              </Button>
-              <Button variant="primary" loading={isMigrating} onClick={submitMigrate}>
-                마이그레이션 실행
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <Alert type="info">
-              config-server가 후보 노드 중 가장 개선 효과가 큰 노드로 Pod를 옮깁니다. 완료까지 최대 10분이 걸릴 수 있습니다.
-            </Alert>
-            <FormField
-              label="후보 노드"
-              description="현재 배포된 노드를 포함해 쉼표(,)로 구분해 입력하세요."
-              constraintText="예: farm1, farm2"
-              errorText={migrateFormError}
-            >
-              <Input
-                value={migrateNodesInput}
-                onChange={setMigrateNodesInput}
-                placeholder="farm1, farm2"
-                disabled={isMigrating}
-              />
-            </FormField>
-            <FormField
-              label="최소 개선 비율 (선택)"
-              description="생략하면 config-server 기본값을 사용합니다."
-            >
-              <Input
-                value={migrateRatioInput}
-                onChange={setMigrateRatioInput}
-                placeholder="0.2"
-                type="number"
-                disabled={isMigrating}
-              />
-            </FormField>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

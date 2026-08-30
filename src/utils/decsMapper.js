@@ -72,8 +72,8 @@ export function mapPodStatus(podStatus) {
 }
 
 /**
- * @param {{ userId: string | number, userName: string, ubuntuUsername: string, podName: string, nodeName: string, imageName: string, imageVersion: string, resourceGroupId: string | number, expiresAt: string }} dto ContainerInfoDTO
- * @returns {{ id: string, name: string, user: string, gpu: string, node: string, status: string, label: string, expires: string }}
+ * @param {{ requestId: string | number, userId: string | number, userName: string, ubuntuUsername: string, podName: string, nodeName: string, imageName: string, imageVersion: string, resourceGroupId: string | number, expiresAt: string }} dto ContainerInfoDTO
+ * @returns {{ id: string, requestId: string | number, name: string, user: string, gpu: string, node: string, status: string, label: string, expires: string }}
  */
 export function mapAdminContainer(dto) {
   const status = mapPodStatus(dto.status);
@@ -82,6 +82,7 @@ export function mapAdminContainer(dto) {
 
   return {
     id: String(dto.ubuntuUsername ?? dto.userId),
+    requestId: dto.requestId,
     name: dto.ubuntuUsername ?? dto.userName ?? "—",
     user: dto.ubuntuUsername ?? dto.userName ?? "—",
     userName: dto.userName,
