@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -7,8 +8,10 @@ import {
 import { AuthProvider } from "./contexts/AuthContext";
 import { useAuth } from "./hooks/useAuth";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
-import AdminConsoleApp from "./pages/decs-console/admin/AdminConsoleApp";
-import UserPortalApp from "./pages/decs-console/user/UserPortalApp";
+
+// 로그인 화면에서는 필요 없는 번들이라 인증 후에만 지연 로드한다
+const AdminConsoleApp = lazy(() => import("./pages/decs-console/admin/AdminConsoleApp"));
+const UserPortalApp = lazy(() => import("./pages/decs-console/user/UserPortalApp"));
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
@@ -44,7 +47,9 @@ const AppContent = () => {
         path="/admin/*"
         element={
           <ProtectedRoute requireAdmin>
-            <AdminConsoleApp />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <AdminConsoleApp />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -52,7 +57,9 @@ const AppContent = () => {
         path="/user/*"
         element={
           <ProtectedRoute>
-            <UserPortalApp />
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <UserPortalApp />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -86,6 +93,14 @@ const AppContent = () => {
     </Routes>
   );
 };
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-gray-500">불러오는 중...</div>
+    </div>
+  );
+}
 
 function App() {
   return (
