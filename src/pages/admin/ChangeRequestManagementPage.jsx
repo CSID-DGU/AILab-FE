@@ -333,7 +333,7 @@ const ChangeRequestManagementPage = () => {
       cell: (r) => (
         <div>
           <div>{r.requestedBy.name}</div>
-          <div className="text-(--decs-text-secondary)">
+          <div style={{ color: "var(--decs-text-secondary)" }}>
             {r.requestedBy.email}
           </div>
         </div>
@@ -373,7 +373,7 @@ const ChangeRequestManagementPage = () => {
       header: "작업",
       minWidth: "150px",
       cell: (r) => (
-        <div className="flex items-center gap-3">
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-s)" }}>
           <Button
             variant="inline-link"
             onClick={() => setSelectedChangeRequest(r)}
@@ -407,7 +407,7 @@ const ChangeRequestManagementPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 256 }}>
         <StatusIndicator type="loading">
           변경 요청 목록을 불러오는 중...
         </StatusIndicator>
@@ -418,7 +418,7 @@ const ChangeRequestManagementPage = () => {
   const sel = selectedChangeRequest;
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
       {alert && (
         <Flashbar
           items={[
@@ -510,7 +510,7 @@ const ChangeRequestManagementPage = () => {
             </>
           }
         >
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-l)" }}>
             <div>{renderStatus(sel.status)}</div>
             {sel.status === "PENDING" && APPROVAL_BLOCK_REASON[sel.changeType] && (
               <Alert type="warning" header="현재 승인할 수 없는 변경 유형입니다">
@@ -546,9 +546,9 @@ const ChangeRequestManagementPage = () => {
                   },
                 ]}
               />
-              <div className="mt-4">
-                <div className="text-(--decs-text-inactive) mb-1">변경 사유</div>
-                <div className="bg-(--decs-surface-sunken) p-3">
+              <div style={{ marginTop: "var(--decs-space-m)" }}>
+                <div style={{ color: "var(--decs-text-inactive)", marginBottom: "var(--decs-space-xxs)" }}>변경 사유</div>
+                <div style={{ background: "var(--decs-surface-sunken)", padding: "var(--decs-space-s)" }}>
                   {sel.reason}
                 </div>
               </div>
@@ -604,20 +604,20 @@ const ChangeRequestManagementPage = () => {
                     },
                   ]}
                 />
-                <div className="mt-4">
-                  <div className="text-(--decs-text-inactive) mb-1">
+                <div style={{ marginTop: "var(--decs-space-m)" }}>
+                  <div style={{ color: "var(--decs-text-inactive)", marginBottom: "var(--decs-space-xxs)" }}>
                     사용 목적
                   </div>
-                  <div className="bg-(--decs-surface-sunken) p-3">
+                  <div style={{ background: "var(--decs-surface-sunken)", padding: "var(--decs-space-s)" }}>
                     {sel.originalRequest.usagePurpose}
                   </div>
                 </div>
                 {sel.originalRequest.portMappings.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-(--decs-text-inactive) mb-1">
+                  <div style={{ marginTop: "var(--decs-space-m)" }}>
+                    <div style={{ color: "var(--decs-text-inactive)", marginBottom: "var(--decs-space-xxs)" }}>
                       포트 매핑
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--decs-space-xs)" }}>
                       {sel.originalRequest.portMappings.map((port, index) => (
                         <Badge
                           key={index}
