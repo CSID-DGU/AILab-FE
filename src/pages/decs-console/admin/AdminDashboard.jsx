@@ -34,7 +34,7 @@ function GpuUtilRow({ server }) {
   );
 }
 
-function GpuUtilPanel() {
+function GpuUtilPanel({ onUpdated }) {
   const [servers, setServers] = useState(null);
   const [error, setError] = useState(null);
 
@@ -44,13 +44,14 @@ function GpuUtilPanel() {
       if (res?.status === 200 && res.data?.data) {
         setServers(res.data.data.gpuServers ?? []);
         setError(null);
+        onUpdated?.(new Date());
       } else {
         setError("지표를 불러오지 못했습니다.");
       }
     } catch {
       setError("모니터링 서버와 연결할 수 없습니다.");
     }
-  }, []);
+  }, [onUpdated]);
 
   useEffect(() => {
     fetchMetrics();
@@ -101,6 +102,7 @@ function StatCard({ label, value, sub, accent, onClick }) {
 }
 
 function AdminDashboard({ onOpenContainers, onOpenErrorContainers, onOpenDetail, containers = [], users = [] }) {
+  const [gpuLastUpdated, setGpuLastUpdated] = useState(null);
   const running = containers.filter((c) => c.status === "success").length;
   const errored = containers.filter((c) => c.status === "error").length;
   const expiring = containers.filter((c) => c.status !== "stopped" && c.expires !== "—" && c.expires <= "2026-07-11").length;
@@ -129,8 +131,15 @@ function AdminDashboard({ onOpenContainers, onOpenErrorContainers, onOpenDetail,
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "var(--decs-space-l)", alignItems: "start" }}>
-        <Container header={<Header variant="h2" description="30초마다 자동으로 갱신됩니다.">GPU 클러스터 사용률</Header>}>
-          <GpuUtilPanel />
+        <Container header={
+          <Header
+            variant="h2"
+            description={`30초마다 자동으로 갱신됩니다.${gpuLastUpdated ? ` (${gpuLastUpdated.toLocaleTimeString("ko-KR")} 기준)` : ""}`}
+          >
+            GPU 클러스터 사용률
+          </Header>
+        }>
+          <GpuUtilPanel onUpdated={setGpuLastUpdated} />
         </Container>
 
         <Container disablePadding header={<Header variant="h2" counter={`(${containers.length})`} actions={<Button variant="link" onClick={onOpenContainers}>전체 보기</Button>}>최근 컨테이너</Header>}>
