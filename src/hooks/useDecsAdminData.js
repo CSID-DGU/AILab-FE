@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { podService } from "../services/podService";
 import userService from "../services/userService";
+import { requestService } from "../services/requestService";
 import { mapAdminContainer } from "../utils/decsMapper";
 
 const ERROR_MESSAGE = "일부 Pod 상세 정보를 불러오지 못했습니다.";
@@ -14,17 +15,30 @@ function getArrayData(res) {
 export function useDecsAdminData() {
   const [containers, setContainers] = useState(undefined);
   const [users, setUsers] = useState(undefined);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
+  const [pendingChangeRequestCount, setPendingChangeRequestCount] = useState(0);
   const [error, setError] = useState(null);
   const cancelledRef = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
 
-    const [containersResult, usersResult] = await Promise.allSettled([
+    const [containersResult, usersResult, requestsResult, changeRequestsResult] = await Promise.allSettled([
       podService.getActiveContainers(),
       userService.getAllUsers(),
+      requestService.getAllRequests(),
+      requestService.getChangeRequests(),
     ]);
     if (cancelledRef.current) return;
+
+    if (requestsResult.status === "fulfilled") {
+      const requestsArray = getArrayData(requestsResult.value) ?? [];
+      setPendingRequestCount(requestsArray.filter((r) => r.status === "PENDING").length);
+    }
+    if (changeRequestsResult.status === "fulfilled") {
+      const changeRequestsArray = getArrayData(changeRequestsResult.value) ?? [];
+      setPendingChangeRequestCount(changeRequestsArray.filter((r) => r.status === "PENDING").length);
+    }
 
     let hasError = false;
 
@@ -80,5 +94,5 @@ export function useDecsAdminData() {
     };
   }, [load]);
 
-  return { containers, users, error, refetch: load };
+  return { containers, users, pendingRequestCount, pendingChangeRequestCount, error, refetch: load };
 }
