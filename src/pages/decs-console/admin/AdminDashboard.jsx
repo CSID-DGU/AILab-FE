@@ -1,9 +1,16 @@
 // AdminDashboard — 전체 상태 즉시 파악 (GPU 사용률 · 컨테이너 상태 · 만료 예정 · 최근 활동)
 import { Container, Header, StatusIndicator, Badge, Button, Table, Alert } from "../../../design-system";
 
-function StatCard({ label, value, sub, accent }) {
+function StatCard({ label, value, sub, accent, onClick }) {
   return (
-    <div style={{ flex: 1, background: "var(--decs-surface-container)", border: "1px solid var(--decs-border-container)", borderRadius: "var(--decs-radius-container)", boxShadow: "var(--decs-shadow-container)", padding: "var(--decs-space-l)" }}>
+    <div
+      onClick={onClick}
+      style={{
+        flex: 1, background: "var(--decs-surface-container)", border: "1px solid var(--decs-border-container)",
+        borderRadius: "var(--decs-radius-container)", boxShadow: "var(--decs-shadow-container)", padding: "var(--decs-space-l)",
+        cursor: onClick ? "pointer" : "default",
+      }}
+    >
       <div style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-inactive)" }}>{label}</div>
       <div style={{ fontSize: "var(--decs-fs-heading-xl)", fontWeight: 700, color: accent || "var(--decs-text-heading)", marginTop: 4, lineHeight: 1.1 }}>{value}</div>
       {sub ? <div style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)", marginTop: 4 }}>{sub}</div> : null}
@@ -11,7 +18,7 @@ function StatCard({ label, value, sub, accent }) {
   );
 }
 
-function AdminDashboard({ onOpenContainers, onOpenDetail, containers = [], users = [] }) {
+function AdminDashboard({ onOpenContainers, onOpenErrorContainers, onOpenDetail, containers = [], users = [] }) {
   const running = containers.filter((c) => c.status === "success").length;
   const errored = containers.filter((c) => c.status === "error").length;
   const expiring = containers.filter((c) => c.status !== "stopped" && c.expires !== "—" && c.expires <= "2026-07-11").length;
@@ -27,15 +34,15 @@ function AdminDashboard({ onOpenContainers, onOpenDetail, containers = [], users
       <Header variant="h1" description="클러스터 자원과 컨테이너 상태를 한눈에 확인합니다">대시보드</Header>
 
       {errored > 0 ? (
-        <Alert type="error" header={`컨테이너 ${errored}건에 오류가 있습니다`} action={<Button variant="normal" onClick={onOpenContainers}>확인</Button>}>
+        <Alert type="error" header={`컨테이너 ${errored}건에 오류가 있습니다`} action={<Button variant="normal" onClick={onOpenErrorContainers}>확인</Button>}>
           desired-state와 observed-state 불일치가 감지되었습니다. 상세에서 이벤트 로그를 확인하세요.
         </Alert>
       ) : null}
 
       <div style={{ display: "flex", gap: "var(--decs-space-m)" }}>
-        <StatCard label="실행 중 컨테이너" value={running} sub={`전체 ${containers.length}건`} />
-        <StatCard label="오류" value={errored} sub="즉시 조치 필요" accent="var(--decs-status-error)" />
-        <StatCard label="만료 임박 (3일)" value={expiring} sub="연장 안내 대상" accent="var(--decs-status-warning)" />
+        <StatCard label="실행 중 컨테이너" value={running} sub={`전체 ${containers.length}건`} onClick={onOpenContainers} />
+        <StatCard label="오류" value={errored} sub="즉시 조치 필요" accent="var(--decs-status-error)" onClick={onOpenErrorContainers} />
+        <StatCard label="만료 임박 (3일)" value={expiring} sub="연장 안내 대상" accent="var(--decs-status-warning)" onClick={onOpenContainers} />
         <StatCard label="등록 사용자" value={users.length} sub="활성 세션 5" />
       </div>
 

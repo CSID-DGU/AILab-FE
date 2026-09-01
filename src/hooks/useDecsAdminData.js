@@ -59,8 +59,16 @@ export function useDecsAdminData() {
           const statusResult = provisioningStatuses[index];
           const detail = result.status === "fulfilled" ? result.value?.data?.data ?? result.value?.data : null;
           const provisioning = statusResult.status === "fulfilled" ? statusResult.value?.data : null;
-          if (container.podName && !detail && (!provisioning || provisioning.stage === "unknown")) hasError = true;
-          return mapAdminContainer({ ...container, podDetail: detail, status: detail?.status ?? provisioning?.stage });
+          // Pod 상세도 프로비저닝 상태도 못 가져오면 그 컨테이너가 실제로 정상인지 전혀 알 수
+          // 없다는 뜻이라, "확인 불가"를 조용히 pending으로 묻지 않고 오류로 명시한다.
+          const couldNotResolveStatus = container.podName && !detail && (!provisioning || provisioning.stage === "unknown");
+          if (couldNotResolveStatus) hasError = true;
+          // effectiveStatus는 phase(예: Running)보다 컨테이너 실제 waiting/terminated 사유
+          // (CrashLoopBackOff 등)를 우선한다 — phase만 보면 반복 재시작 중인 컨테이너를 놓친다.
+          const status = couldNotResolveStatus
+              ? "lookup-failed"
+              : detail?.effectiveStatus ?? detail?.status ?? provisioning?.stage;
+          return mapAdminContainer({ ...container, podDetail: detail, status });
         }));
       } else {
         hasError = true;
