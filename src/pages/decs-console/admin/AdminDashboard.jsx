@@ -76,7 +76,7 @@ function GpuUtilPanel() {
         <span style={{ fontSize: "var(--decs-fs-heading-l)", fontWeight: 700, color: "var(--decs-text-heading)" }}>{avgUtil}%</span>
         <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>전체 평균 · 서버 {servers.length}대</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-s)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--decs-space-s)" }}>
         {servers.map((s) => <GpuUtilRow key={s.hostname} server={s} />)}
       </div>
     </div>
