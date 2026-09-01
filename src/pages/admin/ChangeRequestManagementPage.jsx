@@ -37,12 +37,12 @@ const ChangeRequestManagementPage = () => {
   const [, setAllRequests] = useState([]);
   const [selectedChangeRequest, setSelectedChangeRequest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [filter, setFilter] = useState("ALL"); // ALL, PENDING, FULFILLED, DENIED
   const [alert, setAlert] = useState(null);
   const [processingChangeRequestId, setProcessingChangeRequestId] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       setIsLoading(true);
       setAlert(null);
 
@@ -93,6 +93,7 @@ const ChangeRequestManagementPage = () => {
 
           setChangeRequests(transformedChangeRequests);
           setAllRequests(allRequestsArray);
+          setLastUpdated(new Date());
         } else {
           setAlert({
             type: "error",
@@ -110,8 +111,9 @@ const ChangeRequestManagementPage = () => {
       } finally {
         setIsLoading(false);
       }
-    };
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -436,6 +438,16 @@ const ChangeRequestManagementPage = () => {
       <Header
         variant="h1"
         description="사용자들의 서버 변경 요청을 검토하고 승인/거절할 수 있습니다."
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-s)" }}>
+            {lastUpdated ? (
+              <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>
+                {lastUpdated.toLocaleTimeString("ko-KR")} 기준
+              </span>
+            ) : null}
+            <Button iconName="arrow-path" loading={isLoading} onClick={fetchData}>새로고침</Button>
+          </div>
+        }
       >
         변경 요청 관리
       </Header>

@@ -18,6 +18,7 @@ import {
 const UserManagementPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [alert, setAlert] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("ALL");
@@ -27,17 +28,12 @@ const UserManagementPage = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log("사용자 목록 로드 시작...");
 
       const response = await userService.getAllUsers();
-      console.log("받은 응답:", response);
 
       if (response.status === 200) {
         setUsers(response.data.data || []);
-        setAlert({
-          type: "success",
-          message: "사용자 목록을 성공적으로 불러왔습니다.",
-        });
+        setLastUpdated(new Date());
       } else {
         setAlert({
           type: "error",
@@ -224,9 +220,16 @@ const UserManagementPage = () => {
         variant="h1"
         description="등록된 사용자들을 관리하고 권한을 설정할 수 있습니다."
         actions={
-          <Button iconName="arrow-path" loading={loading} onClick={loadUsers}>
-            새로고침
-          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-s)" }}>
+            {lastUpdated ? (
+              <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>
+                {lastUpdated.toLocaleTimeString("ko-KR")} 기준
+              </span>
+            ) : null}
+            <Button iconName="arrow-path" loading={loading} onClick={loadUsers}>
+              새로고침
+            </Button>
+          </div>
         }
       >
         사용자 관리
