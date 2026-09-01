@@ -20,7 +20,7 @@ function AdminConsoleApp() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
-  const { containers, users, error, refetch } = useDecsAdminData();
+  const { containers, users, pendingRequestCount, pendingChangeRequestCount, error, refetch } = useDecsAdminData();
 
   // 요청 관리 화면에서 승인/거절 처리 후 대시보드로 돌아왔을 때 최신 상태가 바로 보이도록,
   // 대시보드 관련 경로에 진입할 때마다 다시 불러온다.
@@ -37,8 +37,8 @@ function AdminConsoleApp() {
     items: [
       { text: t("shell.dashboard"), href: "/admin", icon: "home" },
       { text: t("shell.containers"), href: "/admin/containers", icon: "cube", badge: containers?.length ?? 0 },
-      { text: t("shell.requestManagement"), href: "/admin/requests", icon: "document-text" },
-      { text: t("shell.changeManagement"), href: "/admin/change-requests", icon: "arrow-path" },
+      { text: t("shell.requestManagement"), href: "/admin/requests", icon: "document-text", badge: pendingRequestCount },
+      { text: t("shell.changeManagement"), href: "/admin/change-requests", icon: "arrow-path", badge: pendingChangeRequestCount },
       { text: t("shell.users"), href: "/admin/users", icon: "users" },
       { type: "divider" },
       { type: "section", text: t("shell.system"), items: [

@@ -12,10 +12,17 @@ export function Modal({ visible, onDismiss, header, children, footer, size = "me
   const titleId = React.useRef(`decs-modal-title-${++modalIdCounter}`).current;
   const dialogRef = React.useRef(null);
 
+  // 열릴 때 한 번만 포커스를 다이얼로그로 옮긴다. onDismiss는 대부분 호출부에서
+  // 인라인 함수로 넘어와 렌더마다 참조가 바뀌므로, 이 effect의 의존성에 넣으면
+  // 다이얼로그 안 입력 필드에 한 글자 칠 때마다(부모 리렌더 → onDismiss 재생성)
+  // 포커스가 다이얼로그 컨테이너로 다시 뺏겨서 한 글자씩만 입력되는 버그가 생긴다.
   React.useEffect(() => {
     if (!visible) return;
-    // 열릴 때 포커스를 다이얼로그로 옮기고, 닫힐 때까지 Escape로 닫을 수 있게 함
     dialogRef.current?.focus();
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (!visible) return;
     const onKeyDown = (e) => { if (e.key === "Escape") onDismiss?.(); };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

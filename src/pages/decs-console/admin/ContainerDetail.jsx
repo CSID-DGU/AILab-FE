@@ -17,6 +17,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
   const [nodesLoading, setNodesLoading] = useState(false);
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [migrateRatioInput, setMigrateRatioInput] = useState("");
+  const [migrateForce, setMigrateForce] = useState(false);
   const [migrateFormError, setMigrateFormError] = useState(null);
   const [isMigrating, setIsMigrating] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -40,6 +41,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
   const openMigrate = async () => {
     setSelectedNodes(c.node && c.node !== "—" ? [c.node] : []);
     setMigrateRatioInput("");
+    setMigrateForce(false);
     setMigrateFormError(null);
     setMigrateOpen(true);
     setNodesLoading(true);
@@ -74,7 +76,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     }
 
     let minImprovementRatio;
-    if (migrateRatioInput.trim() !== "") {
+    if (!migrateForce && migrateRatioInput.trim() !== "") {
       const parsed = Number(migrateRatioInput.trim());
       if (Number.isNaN(parsed)) {
         setMigrateFormError("최소 개선 비율은 숫자로 입력하세요.");
@@ -86,7 +88,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     setMigrateFormError(null);
     setIsMigrating(true);
     try {
-      const response = await requestService.migrateRequest(c.requestId, nodes, minImprovementRatio);
+      const response = await requestService.migrateRequest(c.requestId, nodes, minImprovementRatio, migrateForce);
       const result = response.data?.data ?? response.data;
 
       if (result?.status === "migrated") {
@@ -257,15 +259,29 @@ function ContainerDetail({ item, onBack, onRefetch }) {
               </div>
             )}
           </FormField>
-          <FormField label="최소 개선 비율 (선택)" description="생략하면 config-server 기본값을 사용합니다.">
-            <Input
-              value={migrateRatioInput}
-              onChange={setMigrateRatioInput}
-              placeholder="0.2"
-              type="number"
+          <label style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-xs)", cursor: isMigrating ? "default" : "pointer" }}>
+            <input
+              type="checkbox"
+              checked={migrateForce}
+              onChange={(event) => setMigrateForce(event.target.checked)}
               disabled={isMigrating}
             />
-          </FormField>
+            <span style={{ fontWeight: 600, color: "var(--decs-text-heading)" }}>필수로 마이그레이션</span>
+            <span style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)" }}>
+              개선 효과와 무관하게 선택한 노드로 옮깁니다.
+            </span>
+          </label>
+          {!migrateForce && (
+            <FormField label="최소 개선 비율 (선택)" description="생략하면 config-server 기본값을 사용합니다.">
+              <Input
+                value={migrateRatioInput}
+                onChange={setMigrateRatioInput}
+                placeholder="0.2"
+                type="number"
+                disabled={isMigrating}
+              />
+            </FormField>
+          )}
         </div>
       </Modal>
 

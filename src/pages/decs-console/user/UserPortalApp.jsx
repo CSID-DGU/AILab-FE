@@ -21,7 +21,6 @@ function UserPortalApp() {
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const { server, servers, expiryDays, activities, gpuOptions, envOptions, groupOptions, error } = useDecsUserData();
-  const [submitError, setSubmitError] = React.useState(null);
   const userName = user?.name || user?.email || "사용자";
   const isAdmin = user?.role === "ADMIN";
 
@@ -55,17 +54,11 @@ function UserPortalApp() {
   ];
 
   async function submitRequest(form) {
-    setSubmitError(null);
-    try {
-      const response = await requestService.createRequest(toRequestPayload(form));
-      if (response.status !== 200 && response.status !== 201) {
-        throw new Error("신청에 실패했습니다.");
-      }
-      navigate("/user/requests");
-    } catch (error) {
-      setSubmitError(error.message || "신청에 실패했습니다.");
-      return false;
+    const response = await requestService.createRequest(toRequestPayload(form));
+    if (response.status !== 200 && response.status !== 201) {
+      throw new Error("신청에 실패했습니다.");
     }
+    navigate("/user/requests");
   }
 
   async function submitExtension({ requestId, expiresAt, reason }) {
@@ -94,7 +87,6 @@ function UserPortalApp() {
         navigationWidth={240}
       >
         {error ? <div style={{ marginBottom: "var(--decs-space-m)" }}><Flashbar items={[{ id: "decs-user-data", type: "warning", header: error, dismissible: false }]} /></div> : null}
-        {submitError ? <div style={{ marginBottom: "var(--decs-space-m)" }}><Flashbar items={[{ id: "decs-request-submit", type: "error", header: submitError, dismissible: false }]} /></div> : null}
         <Routes>
           <Route index element={<UserDashboard userName={userName} server={server} expiryDays={expiryDays} activities={activities ?? []} onRequest={() => navigate("/user/request")} onConnect={() => navigate("/user/container")} onExtend={() => navigate("/user/container", { state: { extend: true } })} onDetail={() => navigate("/user/container")} />} />
           <Route path="request" element={<RequestWizard onCancel={() => navigate("/user")} onDone={() => navigate("/user/requests")} gpuOptions={gpuOptions ?? []} envOptions={envOptions ?? []} groupOptions={groupOptions ?? []} onSubmit={submitRequest} />} />
