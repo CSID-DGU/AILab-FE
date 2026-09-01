@@ -45,6 +45,7 @@ const RequestManagementPage = () => {
   const [requests, setRequests] = useState([]);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [filter, setFilter] = useState("PENDING"); // PENDING, FULFILLED, DENIED, DELETED
   const [period, setPeriod] = useState("3M"); // 1M, 3M, 6M, ALL
   const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
@@ -86,40 +87,41 @@ const RequestManagementPage = () => {
     };
   }, [provisioningTargetUsername]);
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      setIsLoading(true);
-      setAlert(null);
+  const fetchRequests = async () => {
+    setIsLoading(true);
+    setAlert(null);
 
-      try {
-        const response = await requestService.getAllRequests();
+    try {
+      const response = await requestService.getAllRequests();
 
-        if (response.status === 200) {
-          // API 응답 데이터를 기존 UI에 맞게 변환
-          // response.data는 서버 응답이고, response.data.data가 실제 배열
-          const requestsArray = response.data?.data ?? [];
-          const transformedRequests = requestsArray.map(mapRequestDtoToUiModel);
+      if (response.status === 200) {
+        // API 응답 데이터를 기존 UI에 맞게 변환
+        // response.data는 서버 응답이고, response.data.data가 실제 배열
+        const requestsArray = response.data?.data ?? [];
+        const transformedRequests = requestsArray.map(mapRequestDtoToUiModel);
 
-          setRequests(transformedRequests);
-        } else {
-          setAlert({
-            type: "error",
-            message:
-              "신청서 목록을 불러올 수 없습니다. 서버 상태를 확인하시거나 관리자에게 문의해주세요.",
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch requests:", error);
+        setRequests(transformedRequests);
+        setLastUpdated(new Date());
+      } else {
         setAlert({
           type: "error",
           message:
-            "신청서 목록 로딩 중 네트워크 오류가 발생했습니다. 인터넷 연결을 확인하시고 페이지를 새로고침해주세요.",
+            "신청서 목록을 불러올 수 없습니다. 서버 상태를 확인하시거나 관리자에게 문의해주세요.",
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch requests:", error);
+      setAlert({
+        type: "error",
+        message:
+          "신청서 목록 로딩 중 네트워크 오류가 발생했습니다. 인터넷 연결을 확인하시고 페이지를 새로고침해주세요.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchRequests();
   }, []);
 
@@ -418,6 +420,16 @@ const RequestManagementPage = () => {
       <Header
         variant="h1"
         description="사용자들의 서버 사용 신청서를 검토하고 승인/거절할 수 있습니다."
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-s)" }}>
+            {lastUpdated ? (
+              <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>
+                {lastUpdated.toLocaleTimeString("ko-KR")} 기준
+              </span>
+            ) : null}
+            <Button iconName="arrow-path" loading={isLoading} onClick={fetchRequests}>새로고침</Button>
+          </div>
+        }
       >
         신청서 관리
       </Header>

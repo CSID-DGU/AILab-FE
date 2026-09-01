@@ -31,6 +31,17 @@ function mapActivity(request) {
   return {
     label: createdAt ? String(createdAt).slice(0, 10) : "—",
     value: `서버 신청 · ${getStatusLabel(request.status)}`,
+    requestId: request.requestId ?? request.request_id,
+    status: request.status,
+    statusLabel: getStatusLabel(request.status),
+    createdAt,
+    resourceGroupName: request.resourceGroup?.resourceGroupName ?? request.resource_group?.resource_group_name,
+    serverName: request.resourceGroup?.serverName ?? request.resource_group?.server_name,
+    imageName: request.imageName ?? request.image_name,
+    imageVersion: request.imageVersion ?? request.image_version,
+    usagePurpose: request.usagePurpose ?? request.usage_purpose,
+    expiresAt: request.expiresAt ?? request.expires_at,
+    comment: request.comment,
   };
 }
 

@@ -14,6 +14,7 @@ import {
 const ImageManagementPage = () => {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [alert, setAlert] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,6 +34,7 @@ const ImageManagementPage = () => {
       const result = await getImages();
       if (result.success) {
         setImages(result.data);
+        setLastUpdated(new Date());
       } else {
         setAlert({
           type: 'error',
@@ -146,13 +148,21 @@ const ImageManagementPage = () => {
         variant="h1"
         description="컨테이너 생성에 사용할 도커 이미지를 관리합니다."
         actions={
-          <Button
-            variant={showCreateForm ? 'normal' : 'primary'}
-            iconName={showCreateForm ? undefined : 'plus'}
-            onClick={() => setShowCreateForm(!showCreateForm)}
-          >
-            {showCreateForm ? '취소' : '새 이미지 생성'}
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--decs-space-s)' }}>
+            {lastUpdated ? (
+              <span style={{ fontSize: 'var(--decs-fs-body-s)', color: 'var(--decs-text-secondary)' }}>
+                {lastUpdated.toLocaleTimeString('ko-KR')} 기준
+              </span>
+            ) : null}
+            <Button iconName="arrow-path" loading={loading} onClick={fetchImages}>새로고침</Button>
+            <Button
+              variant={showCreateForm ? 'normal' : 'primary'}
+              iconName={showCreateForm ? undefined : 'plus'}
+              onClick={() => setShowCreateForm(!showCreateForm)}
+            >
+              {showCreateForm ? '취소' : '새 이미지 생성'}
+            </Button>
+          </div>
         }
       >
         이미지 관리
