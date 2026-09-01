@@ -7,7 +7,11 @@ const STATUS_MAP = {
   ContainerCreating: { type: "in-progress", key: "provisioning" },
   Failed: { type: "error", key: "error" },
   Error: { type: "error", key: "error" },
-  CrashLoopBackOff: { type: "error", key: "error" },
+  CrashLoopBackOff: { type: "error", key: "crash-loop" },
+  ImagePullBackOff: { type: "error", key: "image-pull-error" },
+  ErrImagePull: { type: "error", key: "image-pull-error" },
+  OOMKilled: { type: "error", key: "oom-killed" },
+  Evicted: { type: "error", key: "evicted" },
   Succeeded: { type: "stopped", key: "stopped" },
   Completed: { type: "stopped", key: "stopped" },
   ready: { type: "success", key: "running" },
@@ -27,6 +31,7 @@ const STATUS_MAP = {
   DENIED: { type: "error", key: "denied" },
   MIGRATING: { type: "in-progress", key: "migrating" },
   DELETED: { type: "stopped", key: "deleted" },
+  "lookup-failed": { type: "error", key: "lookup-failed" },
 };
 
 function formatDate(dateStr) {
@@ -98,6 +103,7 @@ export function mapAdminContainer(dto) {
     podContainers: detail.containers ?? [],
     status: status.type,
     label: status.label,
+    statusReason: detail.reason ?? null,
     expires: formatDate(dto.expiresAt),
     image: image || "—",
   };

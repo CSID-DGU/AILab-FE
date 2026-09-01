@@ -144,6 +144,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
       <Container header={<Header variant="h2">스펙</Header>}>
         <KeyValuePairs columns={3} items={[
           { label: "상태", value: <StatusIndicator type={c.status}>{c.label}</StatusIndicator> },
+          ...(c.statusReason ? [{ label: "오류 사유", value: c.statusReason }] : []),
           { label: "리소스 그룹", value: c.gpu },
           { label: "노드", value: c.node },
           { label: "이미지", value: c.image },

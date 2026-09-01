@@ -1,13 +1,16 @@
 // ContainerManagement — Table + 검색/필터 + 행 상세 + 무한 스크롤
 import React from "react";
+import { useLocation } from "react-router-dom";
 import { Table, Header, Container, StatusIndicator, Badge, Button, Input, Select } from "../../../design-system";
 
 const BATCH_SIZE = 10;
 
 function ContainerManagement({ onOpenDetail, containers = [] }) {
+  const location = useLocation();
   const all = containers;
   const [q, setQ] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("all");
+  // 대시보드 "오류" 카드/알림에서 넘어올 때 location.state로 초기 필터를 지정할 수 있게 한다.
+  const [statusFilter, setStatusFilter] = React.useState(location.state?.statusFilter ?? "all");
   const [sort, setSort] = React.useState({ col: null, desc: false });
   const [visibleCount, setVisibleCount] = React.useState(BATCH_SIZE);
   const sentinelRef = React.useRef(null);
@@ -76,7 +79,15 @@ function ContainerManagement({ onOpenDetail, containers = [] }) {
             { id: "user", header: "사용자", sortingField: "user", cell: (c) => c.user },
             { id: "gpu", header: "리소스 그룹", cell: (c) => <Badge color="brand">{c.gpu}</Badge> },
             { id: "node", header: "노드", sortingField: "node", cell: (c) => c.node },
-            { id: "status", header: "상태", cell: (c) => <StatusIndicator type={c.status}>{c.label}</StatusIndicator> },
+            {
+              id: "status",
+              header: "상태",
+              cell: (c) => (
+                <span title={c.statusReason ?? undefined}>
+                  <StatusIndicator type={c.status}>{c.label}</StatusIndicator>
+                </span>
+              ),
+            },
             { id: "expires", header: "만료", sortingField: "expires", cell: (c) => <span style={{ color: "var(--decs-text-secondary)" }}>{c.expires}</span> },
             { id: "actions", header: "", width: 90, cell: (c) => <Button variant="normal" onClick={() => onOpenDetail(c)}>상세</Button> },
           ]}
