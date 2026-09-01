@@ -1,5 +1,5 @@
 // ContainerDetail — 섹션(Container+Header) · 스펙(KeyValuePairs) · 탭(개요/로그/이벤트)
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Container, Header, KeyValuePairs, Tabs, StatusIndicator, BreadcrumbGroup,
   Button, Modal, Alert, FormField, Input,
@@ -7,6 +7,7 @@ import {
 import { requestService } from "../../../services/requestService";
 import userService from "../../../services/userService";
 import { nodeService } from "../../../services/nodeService";
+import { podService } from "../../../services/podService";
 
 function ContainerDetail({ item, onBack, onRefetch }) {
   const c = item;
@@ -23,6 +24,43 @@ function ContainerDetail({ item, onBack, onRefetch }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+
+  const [logsText, setLogsText] = useState(null);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [logsError, setLogsError] = useState(null);
+  const [podEvents, setPodEvents] = useState(null);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState(null);
+
+  useEffect(() => {
+    if (!c?.podName) {
+      setLogsLoading(false);
+      setEventsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLogsLoading(true);
+    setEventsLoading(true);
+    podService.getPodLogs(c.podName).then((res) => {
+      if (cancelled) return;
+      setLogsText(res.data?.data?.logs ?? "");
+      setLogsError(null);
+    }).catch(() => {
+      if (!cancelled) setLogsError("로그를 불러오지 못했습니다.");
+    }).finally(() => {
+      if (!cancelled) setLogsLoading(false);
+    });
+    podService.getPodEvents(c.podName).then((res) => {
+      if (cancelled) return;
+      setPodEvents(res.data?.data ?? []);
+      setEventsError(null);
+    }).catch(() => {
+      if (!cancelled) setEventsError("이벤트를 불러오지 못했습니다.");
+    }).finally(() => {
+      if (!cancelled) setEventsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [c?.podName]);
 
   if (!c) {
     return (
@@ -159,15 +197,55 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     </div>
   );
 
-  const logs = (
+  const logs = logsLoading ? (
+    <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>
+      로그를 불러오는 중...
+    </div>
+  ) : logsError ? (
+    <Alert type="error">{logsError}</Alert>
+  ) : !logsText ? (
     <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>
       표시할 로그 데이터가 없습니다.
     </div>
+  ) : (
+    <pre style={{
+      margin: 0, padding: "var(--decs-space-m)", maxHeight: 480, overflow: "auto",
+      background: "var(--decs-surface-sunken)", borderRadius: "var(--decs-radius-container)",
+      fontFamily: "var(--decs-font-mono, monospace)", fontSize: "var(--decs-fs-body-s)",
+      color: "var(--decs-text-body)", whiteSpace: "pre-wrap", wordBreak: "break-all",
+    }}>
+      {logsText}
+    </pre>
   );
 
-  const events = (
+  const events = eventsLoading ? (
+    <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>
+      이벤트를 불러오는 중...
+    </div>
+  ) : eventsError ? (
+    <Alert type="error">{eventsError}</Alert>
+  ) : !podEvents || podEvents.length === 0 ? (
     <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>
       표시할 이벤트 데이터가 없습니다.
+    </div>
+  ) : (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-s)" }}>
+      {podEvents.map((ev, idx) => (
+        <div
+          key={idx}
+          style={{
+            display: "flex", gap: "var(--decs-space-s)", alignItems: "flex-start",
+            padding: "var(--decs-space-s) var(--decs-space-m)", borderRadius: "var(--decs-radius-container)",
+            background: "var(--decs-surface-sunken)",
+          }}
+        >
+          <StatusIndicator type={ev.type === "Warning" ? "warning" : "success"}>{ev.reason}</StatusIndicator>
+          <div style={{ flex: 1, fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-body)" }}>{ev.message}</div>
+          <div style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)", whiteSpace: "nowrap" }}>
+            {ev.count > 1 ? `${ev.count}회 · ` : ""}{ev.lastTimestamp}
+          </div>
+        </div>
+      ))}
     </div>
   );
 
