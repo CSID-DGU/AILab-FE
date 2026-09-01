@@ -142,6 +142,7 @@ const RequestManagementPage = () => {
 
   const statusCounts = {
     PENDING: requestsInPeriod.filter((r) => r.status === "PENDING").length,
+    PROCESSING: requestsInPeriod.filter((r) => r.status === "PROCESSING").length,
     FULFILLED: requestsInPeriod.filter((r) => r.status === "FULFILLED").length,
     DENIED: requestsInPeriod.filter((r) => r.status === "DENIED").length,
     DELETED: requestsInPeriod.filter((r) => r.status === "DELETED").length,
@@ -299,6 +300,8 @@ const RequestManagementPage = () => {
   const emptyText = `${
     filter === "PENDING"
       ? "대기중인"
+      : filter === "PROCESSING"
+      ? "처리중인"
       : filter === "FULFILLED"
       ? "승인된"
       : filter === "DENIED"
@@ -423,6 +426,7 @@ const RequestManagementPage = () => {
         <Tabs
           tabs={[
             { key: "PENDING", label: "대기중" },
+            { key: "PROCESSING", label: "처리중" },
             { key: "FULFILLED", label: "승인됨" },
             { key: "DENIED", label: "거절됨" },
             { key: "DELETED", label: "삭제됨" },
