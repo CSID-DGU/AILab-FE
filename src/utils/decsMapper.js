@@ -22,8 +22,11 @@ const STATUS_MAP = {
   waiting_ready: { type: "in-progress", key: "provisioning" },
   creating_services: { type: "in-progress", key: "provisioning" },
   PENDING: { type: "pending", key: "pending" },
+  PROCESSING: { type: "in-progress", key: "provisioning" },
   FULFILLED: { type: "success", key: "running" },
   DENIED: { type: "error", key: "denied" },
+  MIGRATING: { type: "in-progress", key: "migrating" },
+  DELETED: { type: "stopped", key: "deleted" },
 };
 
 function formatDate(dateStr) {
