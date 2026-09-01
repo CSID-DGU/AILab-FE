@@ -32,10 +32,11 @@ export const requestService = {
     }),
   getMyChangeRequests: () => apiClient.get("/api/requests/my/changes"),
 
-  migrateRequest: (requestId, nodes, minImprovementRatio) =>
+  migrateRequest: (requestId, nodes, minImprovementRatio, force) =>
     apiClient.post(`/api/admin/requests/${requestId}/migrate`, {
       nodes,
       ...(minImprovementRatio != null && { minImprovementRatio }),
+      ...(force && { force }),
     }, {
       // nginx/ingress 프록시 타임아웃(570s)보다 길게 잡아야 백엔드가 정상
       // 처리 중일 때 프론트가 먼저 타임아웃돼버리는 걸 막을 수 있다.
