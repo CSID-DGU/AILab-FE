@@ -5,6 +5,35 @@ import { monitoringService } from "../../../services/grafanaService";
 
 const GPU_METRICS_REFRESH_MS = 30_000;
 
+function utilBadgeColor(util) {
+  if (util >= 80) return "red";
+  if (util >= 50) return "amber"; // 디자인 시스템 Badge는 "yellow"가 아니라 "amber"를 지원한다
+  return "green";
+}
+
+function GpuUtilRow({ server }) {
+  const util = server.gpuUtil ?? 0;
+  return (
+    <div style={{
+      border: "1px solid var(--decs-border-container)", borderRadius: "var(--decs-radius-item)",
+      background: "var(--decs-surface-sunken)", padding: "var(--decs-space-s) var(--decs-space-m)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--decs-space-xxs)" }}>
+        <span style={{ fontSize: "var(--decs-fs-body-s)", fontWeight: 700, color: "var(--decs-text-heading)", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+          {server.hostname}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--decs-space-xs)" }}>
+          <Badge color={utilBadgeColor(util)}>{util}%</Badge>
+          <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>GPU {server.gpuCount}개</span>
+        </div>
+      </div>
+      {/* ProgressBar의 status="error"는 진행률이 아니라 "완료(실패)" 취급이라 바 자체가 안
+          그려진다 — 사용률 게이지 용도로는 항상 in-progress로 그리고, 색 구분은 위 Badge로 한다. */}
+      <ProgressBar value={util} status="in-progress" />
+    </div>
+  );
+}
+
 function GpuUtilPanel() {
   const [servers, setServers] = useState(null);
   const [error, setError] = useState(null);
@@ -39,24 +68,17 @@ function GpuUtilPanel() {
     return <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>GPU 데이터를 수신하지 못했습니다.</div>;
   }
 
+  const avgUtil = Math.round(servers.reduce((sum, s) => sum + (s.gpuUtil ?? 0), 0) / servers.length);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-m)" }}>
-      {servers.map((s) => (
-        <div key={s.hostname}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
-            <span style={{ fontSize: "var(--decs-fs-body-s)", fontWeight: 600, color: "var(--decs-text-heading)" }}>{s.hostname}</span>
-            <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>GPU {s.gpuCount}개</span>
-          </div>
-          {/* ProgressBar의 status="error"는 진행률이 아니라 "완료(실패)" 취급이라 바 자체가
-              안 그려진다 — 사용률 게이지 용도로는 항상 in-progress로 그리고, 높은 사용률은
-              텍스트 색으로만 강조한다. */}
-          <ProgressBar
-            value={s.gpuUtil}
-            status="in-progress"
-            description={<span style={{ color: s.gpuUtil >= 80 ? "var(--decs-status-error)" : undefined, fontWeight: s.gpuUtil >= 80 ? 700 : undefined }}>{s.gpuUtil}%</span>}
-          />
-        </div>
-      ))}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "var(--decs-space-xs)" }}>
+        <span style={{ fontSize: "var(--decs-fs-heading-l)", fontWeight: 700, color: "var(--decs-text-heading)" }}>{avgUtil}%</span>
+        <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>전체 평균 · 서버 {servers.length}대</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-s)" }}>
+        {servers.map((s) => <GpuUtilRow key={s.hostname} server={s} />)}
+      </div>
     </div>
   );
 }
