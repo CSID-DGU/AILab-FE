@@ -1,5 +1,65 @@
 // AdminDashboard — 전체 상태 즉시 파악 (GPU 사용률 · 컨테이너 상태 · 만료 예정 · 최근 활동)
-import { Container, Header, StatusIndicator, Badge, Button, Table, Alert } from "../../../design-system";
+import { useEffect, useState, useCallback } from "react";
+import { Container, Header, StatusIndicator, Badge, Button, Table, Alert, ProgressBar } from "../../../design-system";
+import { monitoringService } from "../../../services/grafanaService";
+
+const GPU_METRICS_REFRESH_MS = 30_000;
+
+function GpuUtilPanel() {
+  const [servers, setServers] = useState(null);
+  const [error, setError] = useState(null);
+
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await monitoringService.getMetrics();
+      if (res?.status === 200 && res.data?.data) {
+        setServers(res.data.data.gpuServers ?? []);
+        setError(null);
+      } else {
+        setError("지표를 불러오지 못했습니다.");
+      }
+    } catch {
+      setError("모니터링 서버와 연결할 수 없습니다.");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMetrics();
+    const id = setInterval(fetchMetrics, GPU_METRICS_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [fetchMetrics]);
+
+  if (error) {
+    return <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>{error}</div>;
+  }
+  if (servers === null) {
+    return <StatusIndicator type="loading">지표를 불러오는 중...</StatusIndicator>;
+  }
+  if (servers.length === 0) {
+    return <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>GPU 데이터를 수신하지 못했습니다.</div>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-m)" }}>
+      {servers.map((s) => (
+        <div key={s.hostname}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
+            <span style={{ fontSize: "var(--decs-fs-body-s)", fontWeight: 600, color: "var(--decs-text-heading)" }}>{s.hostname}</span>
+            <span style={{ fontSize: "var(--decs-fs-body-s)", color: "var(--decs-text-secondary)" }}>GPU {s.gpuCount}개</span>
+          </div>
+          {/* ProgressBar의 status="error"는 진행률이 아니라 "완료(실패)" 취급이라 바 자체가
+              안 그려진다 — 사용률 게이지 용도로는 항상 in-progress로 그리고, 높은 사용률은
+              텍스트 색으로만 강조한다. */}
+          <ProgressBar
+            value={s.gpuUtil}
+            status="in-progress"
+            description={<span style={{ color: s.gpuUtil >= 80 ? "var(--decs-status-error)" : undefined, fontWeight: s.gpuUtil >= 80 ? 700 : undefined }}>{s.gpuUtil}%</span>}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function StatCard({ label, value, sub, accent, onClick }) {
   return (
@@ -47,10 +107,8 @@ function AdminDashboard({ onOpenContainers, onOpenErrorContainers, onOpenDetail,
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr", gap: "var(--decs-space-l)", alignItems: "start" }}>
-        <Container header={<Header variant="h2">GPU 클러스터 사용률</Header>}>
-          <div style={{ color: "var(--decs-text-secondary)", fontSize: "var(--decs-fs-body-s)", padding: "16px 0", textAlign: "center" }}>
-            사용률 데이터는 현재 표시되지 않습니다.
-          </div>
+        <Container header={<Header variant="h2" description="30초마다 자동으로 갱신됩니다.">GPU 클러스터 사용률</Header>}>
+          <GpuUtilPanel />
         </Container>
 
         <Container disablePadding header={<Header variant="h2" counter={`(${containers.length})`} actions={<Button variant="link" onClick={onOpenContainers}>전체 보기</Button>}>최근 컨테이너</Header>}>
