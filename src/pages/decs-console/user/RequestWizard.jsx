@@ -53,9 +53,9 @@ function RequestWizard({ onCancel, onDone, gpuOptions: gpuOptionsProp, envOption
   );
   const selectedGroupIds = React.useMemo(() => new Set(selectedGroups.map((g) => g.value)), [selectedGroups]);
   const groupSelectOptions = groupOptions.map((g) => ({ ...g, disabled: selectedGroupIds.has(g.value) }));
-  const ubuntuUsernamePattern = /^[a-z][a-z0-9_-]{2,49}$/;
+  const ubuntuUsernamePattern = /^[a-z][a-z0-9-]{1,48}[a-z0-9]$/;
   const ubuntuUsernameFormatError = ubuntuUsername && !ubuntuUsernamePattern.test(ubuntuUsername)
-    ? "소문자로 시작하고 소문자·숫자·_·-만 사용해 3~50자로 입력해주세요."
+    ? "소문자로 시작하고 소문자·숫자·-만 사용해 3~50자로 입력해주세요. (끝 글자는 -가 아닌 소문자/숫자, _는 사용 불가)"
     : null;
   const ubuntuPasswordLengthError = ubuntuPassword && ubuntuPassword.length < 8
     ? "비밀번호는 8자 이상 입력해주세요."
@@ -72,7 +72,7 @@ function RequestWizard({ onCancel, onDone, gpuOptions: gpuOptionsProp, envOption
     if (!ubuntuUsername) {
       nextErrors.ubuntuUsername = "Ubuntu 사용자명을 입력해주세요.";
     } else if (!ubuntuUsernamePattern.test(ubuntuUsername)) {
-      nextErrors.ubuntuUsername = "소문자로 시작하고 소문자·숫자·_·-만 사용해 3~50자로 입력해주세요.";
+      nextErrors.ubuntuUsername = "소문자로 시작하고 소문자·숫자·-만 사용해 3~50자로 입력해주세요. (끝 글자는 -가 아닌 소문자/숫자, _는 사용 불가)";
     }
     if (!ubuntuPassword) {
       nextErrors.ubuntuPassword = "Ubuntu 비밀번호를 입력해주세요.";
@@ -140,8 +140,10 @@ function RequestWizard({ onCancel, onDone, gpuOptions: gpuOptionsProp, envOption
     setStep(nextStep);
   }
 
-  function addGroup() {
-    const group = groupOptions.find((g) => g.value === selectedGroupId);
+  // 다른 단일 선택 필드(서버/GPU/이미지)와 달리 "선택"과 "추가"가 분리돼 있으면
+  // 드롭다운에서 고르기만 하고 넘어가는 실수가 나오기 쉽다 — 고르는 즉시 바로 추가한다.
+  function handleSelectGroup(value) {
+    const group = groupOptions.find((g) => g.value === value);
     if (!group || selectedGroupIds.has(group.value)) return;
     setSelectedGroups((prev) => [...prev, group]);
     setSelectedGroupId("");
@@ -276,8 +278,12 @@ function RequestWizard({ onCancel, onDone, gpuOptions: gpuOptionsProp, envOption
           <FormField label="Ubuntu 사용자명" errorText={ubuntuUsernameError}>
             <Input
               value={ubuntuUsername}
-              onChange={(value) => { setUbuntuUsername(value); setEnvErrors((prev) => ({ ...prev, ubuntuUsername: null })); }}
-              placeholder="소문자·숫자, 3~50자 (SSH 로그인 계정)"
+              onChange={(value) => {
+                const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                setUbuntuUsername(sanitized);
+                setEnvErrors((prev) => ({ ...prev, ubuntuUsername: null }));
+              }}
+              placeholder="소문자·숫자·- 만 사용, 3~50자 (SSH 로그인 계정)"
               invalid={!!ubuntuUsernameError}
             />
           </FormField>
@@ -290,11 +296,8 @@ function RequestWizard({ onCancel, onDone, gpuOptions: gpuOptionsProp, envOption
               invalid={!!ubuntuPasswordError}
             />
           </FormField>
-          <FormField label="공유 그룹">
-            <div style={{ display: "flex", gap: "var(--decs-space-xs)" }}>
-              <Select selectedValue={selectedGroupId} onChange={setSelectedGroupId} options={groupSelectOptions} placeholder="공유 그룹 선택" style={{ flex: 1 }} />
-              <Button iconName="plus" onClick={addGroup} disabled={!selectedGroupId || selectedGroupIds.has(selectedGroupId)} ariaLabel="공유 그룹 추가">추가</Button>
-            </div>
+          <FormField label="공유 그룹" constraintText="선택하면 바로 추가돼요.">
+            <Select selectedValue={selectedGroupId} onChange={handleSelectGroup} options={groupSelectOptions} placeholder="공유 그룹 선택" />
             {selectedGroups.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--decs-space-xs)", marginTop: "var(--decs-space-xs)" }}>
                 {selectedGroups.map((group) => (
