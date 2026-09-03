@@ -51,33 +51,52 @@ const RequestManagementPage = () => {
   const [visibleCount, setVisibleCount] = useState(PAGE_BATCH_SIZE);
   const sentinelRef = useRef(null);
   const [alert, setAlert] = useState(null);
-  const [processingRequestId, setProcessingRequestId] = useState(null);
-  const [processingUsername, setProcessingUsername] = useState(null);
-  const [provisioningStatus, setProvisioningStatus] = useState(null);
+  // 백엔드 podCreationSemaphore가 최대 3건 동시 처리를 허용하므로, 프론트도 신청서별로
+  // 독립적으로 처리 상태를 추적한다 — 하나가 처리 중이어도 다른 신청서는 막히면 안 된다.
+  const [processingRequestIds, setProcessingRequestIds] = useState(() => new Set());
+  const [processingUsernames, setProcessingUsernames] = useState({}); // { [requestId]: username }
+  const [provisioningStatuses, setProvisioningStatuses] = useState({}); // { [requestId]: status }
 
   // 목록에 PROCESSING 상태인 신청서가 있으면(다른 관리자가 처리 중이거나, 내가 승인 처리
-  // 중에 페이지를 나갔다가 새로고침해서 돌아온 경우) processingRequestId가 이번 세션에서
-  // 클릭한 적 없어도 그 신청서 기준으로 상태 배너/폴링을 이어간다.
-  const processingListRequest = requests.find((r) => r.status === "PROCESSING") || null;
+  // 중에 페이지를 나갔다가 새로고침해서 돌아온 경우) 이번 세션에서 클릭한 적 없어도
+  // 그 신청서들 기준으로 상태 배너/폴링을 이어간다.
+  const processingListRequests = requests.filter((r) => r.status === "PROCESSING");
 
-  // 승인 처리 중(Pod 생성 포함)일 때 config-server의 세세한 진행 단계를 폴링해서 보여준다.
-  // 조회 실패는 승인 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
-  const provisioningTargetUsername =
-    processingUsername || processingListRequest?.ubuntu_username || null;
+  // 승인 처리 중(Pod 생성 포함)인 신청서마다 config-server의 세세한 진행 단계를 폴링해서
+  // 보여준다. 조회 실패는 승인 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
+  const activeProvisioningTargets = (() => {
+    const targets = {};
+    for (const id of processingRequestIds) {
+      const username = processingUsernames[id];
+      if (username) targets[id] = username;
+    }
+    for (const r of processingListRequests) {
+      if (!(r.request_id in targets)) targets[r.request_id] = r.ubuntu_username;
+    }
+    return targets; // { [requestId]: username }
+  })();
+  const activeTargetsRef = useRef({});
+  activeTargetsRef.current = activeProvisioningTargets;
 
   useEffect(() => {
-    if (!provisioningTargetUsername) {
-      setProvisioningStatus(null);
-      return;
-    }
     let cancelled = false;
     const poll = async () => {
-      try {
-        const res = await podService.getProvisioningStatus(provisioningTargetUsername);
-        if (!cancelled) setProvisioningStatus(res?.data ?? null);
-      } catch {
-        // ignore
+      const entries = Object.entries(activeTargetsRef.current);
+      if (entries.length === 0) {
+        if (!cancelled) setProvisioningStatuses({});
+        return;
       }
+      const results = await Promise.all(
+        entries.map(async ([id, username]) => {
+          try {
+            const res = await podService.getProvisioningStatus(username);
+            return [id, res?.data ?? null];
+          } catch {
+            return [id, null];
+          }
+        })
+      );
+      if (!cancelled) setProvisioningStatuses(Object.fromEntries(results));
     };
     poll();
     const interval = setInterval(poll, 1000);
@@ -85,7 +104,7 @@ const RequestManagementPage = () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [provisioningTargetUsername]);
+  }, []);
 
   const fetchRequests = async () => {
     setIsLoading(true);
@@ -188,7 +207,6 @@ const RequestManagementPage = () => {
           requestId: request.request_id,
           imageId: request.image_id,
           resourceGroupId: request.rsgroup_id,
-          volumeSizeGiB: request.volume_size_GB,
           adminComment: comment,
         };
         response = await requestService.approveRequest(approvalData);
