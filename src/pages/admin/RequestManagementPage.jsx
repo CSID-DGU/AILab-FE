@@ -76,7 +76,11 @@ const RequestManagementPage = () => {
     return targets; // { [requestId]: username }
   })();
   const activeTargetsRef = useRef({});
-  activeTargetsRef.current = activeProvisioningTargets;
+  // render 중에 ref를 직접 mutate하면 React가 렌더를 중간에 버리거나 재시도할 때 커밋된
+  // 적 없는 값이 ref에 남을 수 있다 — commit 이후에만 실행되는 effect로 옮긴다.
+  useEffect(() => {
+    activeTargetsRef.current = activeProvisioningTargets;
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -189,14 +193,18 @@ const RequestManagementPage = () => {
   }, [hasMore, filteredRequests.length]);
 
   const handleStatusUpdate = async (request, newStatus, comment = "") => {
-    if (processingRequestId !== null) return;
-    setProcessingRequestId(request.request_id);
+    if (processingRequestIds.has(request.request_id)) return;
+    setProcessingRequestIds((prev) => new Set(prev).add(request.request_id));
     if (newStatus === "FULFILLED") {
-      // 같은 사용자를 재승인할 때는 provisioningTargetUsername이 안 바뀌어서
-      // 폴링 useEffect가 재실행되지 않는다 — 이전 실패 시도의 진행 단계 메시지가
-      // 첫 폴링(2초) 전까지 그대로 남아 보이는 걸 막기 위해 여기서 바로 지운다.
-      setProvisioningStatus(null);
-      setProcessingUsername(request.ubuntu_username);
+      // 같은 사용자를 재승인할 때는 target username이 안 바뀌어서 폴링이 이어서 도는데,
+      // 이전 실패 시도의 진행 단계 메시지가 다음 폴링 틱 전까지 그대로 남아 보이는 걸
+      // 막기 위해 여기서 바로 지운다.
+      setProvisioningStatuses((prev) => {
+        const next = { ...prev };
+        delete next[request.request_id];
+        return next;
+      });
+      setProcessingUsernames((prev) => ({ ...prev, [request.request_id]: request.ubuntu_username }));
     }
     try {
       let response;
@@ -280,8 +288,16 @@ const RequestManagementPage = () => {
         });
       }
     } finally {
-      setProcessingRequestId(null);
-      setProcessingUsername(null);
+      setProcessingRequestIds((prev) => {
+        const next = new Set(prev);
+        next.delete(request.request_id);
+        return next;
+      });
+      setProcessingUsernames((prev) => {
+        const next = { ...prev };
+        delete next[request.request_id];
+        return next;
+      });
     }
   };
 
@@ -379,14 +395,14 @@ const RequestManagementPage = () => {
             상세
           </Button>
           {r.status === "PENDING" && (
-            <Button variant="inline-link" disabled={processingRequestId !== null} loading={processingRequestId === r.request_id} onClick={() => promptApprove(r)}>
+            <Button variant="inline-link" disabled={processingRequestIds.has(r.request_id)} loading={processingRequestIds.has(r.request_id)} onClick={() => promptApprove(r)}>
               승인
             </Button>
           )}
           {(r.status === "PENDING" || r.status === "PROCESSING") && (
             <Button
               variant="inline-link"
-              disabled={processingRequestId !== null}
+              disabled={processingRequestIds.has(r.request_id)}
               style={{ color: "var(--decs-status-error)" }}
               onClick={() => promptDeny(r)}
             >
@@ -425,13 +441,20 @@ const RequestManagementPage = () => {
           ]}
         />
       )}
-      {processingRequestId !== null || processingListRequest ? (
+      {Object.keys(activeProvisioningTargets).length > 0 ? (
         <Alert type="info">
-          {processingListRequest && processingRequestId === null
-            ? `${processingListRequest.user_name}님의 신청서가 Pod 생성 처리 중입니다.`
-            : "Pod 생성으로 승인 처리에 최대 10분이 걸릴 수 있습니다."}{" "}
-          중복 클릭해도 안전하지만, 완료 전까지는 같은 신청서에 대한 새 승인 요청이 거부됩니다.
-          {provisioningStatus?.message ? ` (현재 단계: ${provisioningStatus.message})` : null}
+          {Object.entries(activeProvisioningTargets).map(([id, uname]) => {
+            const req = requests.find((r) => String(r.request_id) === String(id));
+            const status = provisioningStatuses[id];
+            const label = req ? req.user_name : uname;
+            return (
+              <div key={id}>
+                {label}님의 신청서가 Pod 생성으로 처리 중입니다(최대 10분 소요 가능). 중복 클릭해도
+                안전하지만, 완료 전까지는 같은 신청서에 대한 새 승인 요청이 거부됩니다.
+                {status?.message ? ` (현재 단계: ${status.message})` : null}
+              </div>
+            );
+          })}
         </Alert>
       ) : null}
 
@@ -511,7 +534,7 @@ const RequestManagementPage = () => {
               {(sel.status === "PENDING" || sel.status === "PROCESSING") && (
                 <Button
                   variant="normal"
-                  disabled={processingRequestId !== null}
+                  disabled={processingRequestIds.has(sel.request_id)}
                   style={{
                     color: "var(--decs-status-error)",
                     borderColor: "var(--decs-status-error)",
@@ -522,7 +545,7 @@ const RequestManagementPage = () => {
                 </Button>
               )}
               {sel.status === "PENDING" && (
-                <Button variant="primary" disabled={processingRequestId !== null} loading={processingRequestId === sel.request_id} onClick={() => promptApprove(sel)}>
+                <Button variant="primary" disabled={processingRequestIds.has(sel.request_id)} loading={processingRequestIds.has(sel.request_id)} onClick={() => promptApprove(sel)}>
                   승인
                 </Button>
               )}
