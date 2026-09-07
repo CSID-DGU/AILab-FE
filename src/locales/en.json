@@ -9,5 +9,5 @@
   "shell": {
     "adminTitle": "DECS Admin Console", "userTitle": "DGU GPU Portal", "dashboard": "Dashboard", "containers": "Containers", "myContainer": "My container", "gpuRequest": "GPU request", "requests": "Requests", "requestManagement": "Request management", "changeRequests": "Change requests", "changeManagement": "Change management", "users": "Users", "system": "System", "monitoring": "Monitoring", "resourceMonitoring": "Resource monitoring", "images": "Images", "templates": "Message templates", "account": "Account"
   },
-  "status": { "running": "Running", "provisioning": "Provisioning", "error": "Error", "stopped": "Stopped", "pending": "Pending approval", "denied": "Denied", "unknown": "Unknown", "migrating": "Migrating", "deleted": "Deleted", "crash-loop": "Crash looping", "image-pull-error": "Image pull failed", "oom-killed": "Killed (OOM)", "evicted": "Evicted", "lookup-failed": "Status unavailable" }
+  "status": { "running": "Running", "provisioning": "Provisioning", "error": "Error", "stopped": "Stopped", "pending": "Pending approval", "denied": "Denied", "unknown": "Unknown", "migrating": "Migrating", "expiring": "Expiring", "deleted": "Deleted", "crash-loop": "Crash looping", "image-pull-error": "Image pull failed", "oom-killed": "Killed (OOM)", "evicted": "Evicted", "lookup-failed": "Status unavailable" }
 }
