@@ -4,7 +4,7 @@ import userService from "../services/userService";
 import { requestService } from "../services/requestService";
 import { mapAdminContainer } from "../utils/decsMapper";
 
-const ERROR_MESSAGE = "일부 Pod 상세 정보를 불러오지 못했습니다.";
+const GENERIC_ERROR_MESSAGE = "일부 정보를 불러오지 못했습니다.";
 
 function getArrayData(res) {
   if (Array.isArray(res?.data)) return res.data;
@@ -41,6 +41,9 @@ export function useDecsAdminData() {
     }
 
     let hasError = false;
+    // 어떤 컨테이너/데이터가 실패했는지 구체적으로 알려주기 위해 실패 사유를 모은다 —
+    // "일부 정보를 불러오지 못했습니다"만 뜨면 관리자가 뭘 다시 확인해야 할지 알 수 없다.
+    const failureDetails = [];
 
     if (containersResult.status === "fulfilled" && containersResult.value?.status === 200) {
       const activeContainers = getArrayData(containersResult.value);
@@ -62,7 +65,10 @@ export function useDecsAdminData() {
           // Pod 상세도 프로비저닝 상태도 못 가져오면 그 컨테이너가 실제로 정상인지 전혀 알 수
           // 없다는 뜻이라, "확인 불가"를 조용히 pending으로 묻지 않고 오류로 명시한다.
           const couldNotResolveStatus = container.podName && !detail && (!provisioning || provisioning.stage === "unknown");
-          if (couldNotResolveStatus) hasError = true;
+          if (couldNotResolveStatus) {
+            hasError = true;
+            failureDetails.push(container.ubuntuUsername ?? container.podName ?? "알 수 없는 컨테이너");
+          }
           // effectiveStatus는 phase(예: Running)보다 컨테이너 실제 waiting/terminated 사유
           // (CrashLoopBackOff 등)를 우선한다 — phase만 보면 반복 재시작 중인 컨테이너를 놓친다.
           const status = couldNotResolveStatus
@@ -72,9 +78,11 @@ export function useDecsAdminData() {
         }));
       } else {
         hasError = true;
+        failureDetails.push("컨테이너 목록");
       }
     } else {
       hasError = true;
+      failureDetails.push("컨테이너 목록");
     }
 
     if (usersResult.status === "fulfilled" && usersResult.value?.status === 200) {
@@ -83,13 +91,15 @@ export function useDecsAdminData() {
         setUsers(userList);
       } else {
         hasError = true;
+        failureDetails.push("사용자 목록");
       }
     } else {
       hasError = true;
+      failureDetails.push("사용자 목록");
     }
 
     if (hasError) {
-      setError(ERROR_MESSAGE);
+      setError(`${GENERIC_ERROR_MESSAGE} (${failureDetails.join(", ")})`);
     }
   }, []);
 
