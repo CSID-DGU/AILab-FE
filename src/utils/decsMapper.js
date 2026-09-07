@@ -88,6 +88,18 @@ export function mapAdminContainer(dto) {
   const image = [dto.imageName, dto.imageVersion].filter(Boolean).join(":");
   const detail = dto.podDetail ?? {};
 
+  const ports = getPodExternalPorts(dto);
+  const sshPort = getExternalPort(findPort(ports, "ssh", 22));
+  const jupyterPort = getExternalPort(findPort(ports, "jupyter", 8888));
+  const sshPublicPort = toPublicPort(sshPort);
+  const jupyterPublicPort = toPublicPort(jupyterPort);
+  const sshCommand = sshPort && dto.ubuntuUsername
+    ? `ssh ${dto.ubuntuUsername}@${PUBLIC_HOST} -p ${sshPublicPort ?? sshPort}`
+    : "—";
+  const jupyterUrl = jupyterPort
+    ? `http://${PUBLIC_HOST}:${jupyterPublicPort ?? jupyterPort}`
+    : "—";
+
   return {
     id: String(dto.ubuntuUsername ?? dto.userId),
     requestId: dto.requestId,
@@ -106,6 +118,8 @@ export function mapAdminContainer(dto) {
     statusReason: detail.reason ?? null,
     expires: formatDate(dto.expiresAt),
     image: image || "—",
+    sshCommand,
+    jupyterUrl,
   };
 }
 

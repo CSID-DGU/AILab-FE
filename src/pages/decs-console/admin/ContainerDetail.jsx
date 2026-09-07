@@ -222,6 +222,9 @@ function ContainerDetail({ item, onBack, onRefetch }) {
           { label: "생성일", value: c.createdAt },
           { label: "만료", value: c.expires },
           { label: "컨테이너", value: c.podContainers.length ? c.podContainers.map((container) => `${container.name} (${container.image})`).join(", ") : "—" },
+          ...(c.sshCommand && c.sshCommand !== "—"
+            ? [{ label: "SSH 접속", value: c.sshCommand, copyable: true, copyText: c.sshCommand }]
+            : []),
         ]} />
       </Container>
     </div>
