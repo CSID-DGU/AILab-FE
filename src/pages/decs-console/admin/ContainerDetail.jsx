@@ -21,6 +21,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
   const [migrateForce, setMigrateForce] = useState(false);
   const [migrateFormError, setMigrateFormError] = useState(null);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -61,6 +62,35 @@ function ContainerDetail({ item, onBack, onRefetch }) {
     });
     return () => { cancelled = true; };
   }, [c?.podName]);
+
+  // 마이그레이션 진행 중일 때 config-server의 세세한 진행 단계를 폴링해서 보여준다.
+  // 승인 요청 진행 상태(RequestManagementPage)와 동일한 패턴 — 조회 실패는
+  // 마이그레이션 흐름 자체에 영향을 주지 않으므로 조용히 무시한다.
+  useEffect(() => {
+    if (!isMigrating || !c?.name) {
+      setMigrationStatus(null);
+      return;
+    }
+    let cancelled = false;
+    let timeoutId;
+    // setInterval 대신 매 응답을 받은 뒤에만 다음 폴링을 예약한다 — 네트워크 지연으로
+    // 요청이 겹치면 먼저 보낸(오래된 단계) 응답이 나중에 도착해 최신 단계를 덮어쓸 수 있다.
+    const poll = async () => {
+      try {
+        const res = await podService.getProvisioningStatus(c.name);
+        if (!cancelled) setMigrationStatus(res?.data ?? null);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) timeoutId = setTimeout(poll, 1000);
+      }
+    };
+    poll();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [isMigrating, c?.name]);
 
   if (!c) {
     return (
@@ -298,6 +328,7 @@ function ContainerDetail({ item, onBack, onRefetch }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--decs-space-m)" }}>
           <Alert type="info">
             config-server가 후보 노드 중 가장 개선 효과가 큰 노드로 Pod를 옮깁니다. 완료까지 최대 10분이 걸릴 수 있습니다.
+            {isMigrating && migrationStatus?.message ? ` (현재 단계: ${migrationStatus.message})` : null}
           </Alert>
           <FormField
             label="후보 노드"
