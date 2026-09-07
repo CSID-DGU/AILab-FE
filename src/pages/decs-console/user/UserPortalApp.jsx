@@ -20,7 +20,7 @@ function UserPortalApp() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
-  const { server, servers, expiryDays, activities, gpuOptions, envOptions, groupOptions, error } = useDecsUserData();
+  const { server, servers, expiryDays, activities, gpuOptions, envOptions, groupOptions, error, refetch } = useDecsUserData();
   const userName = user?.name || user?.email || "사용자";
   const isAdmin = user?.role === "ADMIN";
 
@@ -78,6 +78,11 @@ function UserPortalApp() {
     navigate("/user/change-requests");
   }
 
+  async function submitReboot(requestId) {
+    const response = await requestService.rebootRequest(requestId);
+    return response.data?.data ?? response.data;
+  }
+
   return (
     <div style={{ height: "100vh" }}>
       <AppLayout
@@ -90,7 +95,7 @@ function UserPortalApp() {
         <Routes>
           <Route index element={<UserDashboard userName={userName} server={server} expiryDays={expiryDays} activities={activities ?? []} onRequest={() => navigate("/user/request")} onConnect={() => navigate("/user/container")} onExtend={() => navigate("/user/container", { state: { extend: true } })} onDetail={() => navigate("/user/container")} />} />
           <Route path="request" element={<RequestWizard onCancel={() => navigate("/user")} onDone={() => navigate("/user/requests")} gpuOptions={gpuOptions ?? []} envOptions={envOptions ?? []} groupOptions={groupOptions ?? []} onSubmit={submitRequest} />} />
-          <Route path="container" element={<UserContainerDetail onBack={() => navigate("/user")} onExtend={submitExtension} servers={servers ?? []} />} />
+          <Route path="container" element={<UserContainerDetail onBack={() => navigate("/user")} onExtend={submitExtension} onReboot={submitReboot} onRefetch={refetch} servers={servers ?? []} />} />
           <Route path="requests" element={<RequestStatusPage />} />
           <Route path="change-requests" element={<MyChangeRequestsPage />} />
           <Route path="account" element={<AccountPage user={user} />} />
