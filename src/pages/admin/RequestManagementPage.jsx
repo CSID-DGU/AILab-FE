@@ -74,7 +74,23 @@ const RequestManagementPage = () => {
     const poll = async () => {
       try {
         const res = await podService.getProvisioningStatus(provisioningTargetUsername);
-        if (!cancelled) setProvisioningStatus(res?.data ?? null);
+        const data = res?.data ?? null;
+        if (cancelled) return;
+        setProvisioningStatus(data);
+        // 승인 후처리는 비동기라 approveRequest() 응답만으로는 실제 완료 여부를 알 수
+        // 없다 — config-server가 남기는 stage가 ready(성공)/failed(실패)로 끝나는 걸
+        // 폴링으로 확인한 뒤에야 목록을 새로고침하고 최종 결과를 안내한다.
+        if (data?.stage === "ready" || data?.stage === "failed") {
+          setProcessingUsername(null);
+          setAlert({
+            type: data.stage === "ready" ? "success" : "error",
+            message:
+              data.stage === "ready"
+                ? "승인 처리가 완료되었습니다."
+                : `승인 처리가 실패했습니다: ${data.message ?? "원인 불명"} — 요청이 대기중 상태로 되돌아갔을 수 있습니다.`,
+          });
+          fetchRequests();
+        }
       } catch {
         // ignore
       }
@@ -179,6 +195,7 @@ const RequestManagementPage = () => {
       setProvisioningStatus(null);
       setProcessingUsername(request.ubuntu_username);
     }
+    let isSubmitSuccess = false;
     try {
       let response;
 
@@ -204,28 +221,40 @@ const RequestManagementPage = () => {
       }
 
       if (response.status === 200) {
+        isSubmitSuccess = true;
         const processedAt = new Date().toISOString();
+        // 승인(FULFILLED)은 이제 후처리가 비동기라, 응답이 왔다고 실제로 끝난 게 아니다 —
+        // 서버가 돌려준 실제 상태(보통 PROCESSING)를 그대로 반영한다. 최종 완료/실패는
+        // provisioningStatus 폴링이 ready/failed를 감지했을 때 별도로 안내한다.
+        const actualStatus = newStatus === "FULFILLED"
+          ? (response.data?.data?.status ?? response.data?.status ?? "PROCESSING")
+          : newStatus;
 
         setRequests((prev) =>
           prev.map((req) =>
             req.request_id === request.request_id
               ? {
                   ...req,
-                  status: newStatus,
+                  status: actualStatus,
                   admin_comment: comment,
                   updated_at: processedAt,
-                  approved_at: newStatus === "FULFILLED" ? processedAt : req.approved_at,
+                  approved_at: actualStatus === "FULFILLED" ? processedAt : req.approved_at,
                 }
               : req
           )
         );
 
-        setAlert({
-          type: "success",
-          message: `${request.user_name}님의 신청서가 성공적으로 ${
-            newStatus === "FULFILLED" ? "승인" : "거절"
-          }되었습니다.`,
-        });
+        if (newStatus === "FULFILLED") {
+          setAlert({
+            type: "info",
+            message: `${request.user_name}님의 신청서 승인 처리를 시작했습니다. 완료까지 최대 10분이 걸릴 수 있으며, 진행 상태는 위 배너에서 확인할 수 있습니다.`,
+          });
+        } else {
+          setAlert({
+            type: "success",
+            message: `${request.user_name}님의 신청서가 성공적으로 거절되었습니다.`,
+          });
+        }
 
         setSelectedRequest(null);
 
@@ -262,8 +291,15 @@ const RequestManagementPage = () => {
         });
       }
     } finally {
+      // processingRequestId는 버튼 중복 클릭 방지용이라 응답이 오면 바로 풀어도 된다.
+      // processingUsername은 여기서 무조건 지우지 않는다 — FULFILLED 제출이 성공했다면
+      // 비동기 후처리가 아직 진행 중이므로, 진행 상태 폴링 배너가 계속 보여야 한다
+      // (ready/failed로 끝나는 걸 폴링이 감지하면 그때 지운다). 제출 자체가 실패했거나
+      // 거절(DENIED)인 경우엔 더 이상 폴링할 이유가 없으니 여기서 지운다.
       setProcessingRequestId(null);
-      setProcessingUsername(null);
+      if (newStatus !== "FULFILLED" || !isSubmitSuccess) {
+        setProcessingUsername(null);
+      }
     }
   };
 
