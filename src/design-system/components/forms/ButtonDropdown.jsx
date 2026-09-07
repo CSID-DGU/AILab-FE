@@ -17,6 +17,18 @@ export function ButtonDropdown({ items = [], children = "작업", variant = "nor
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  // 트리거 아래 공간이 부족하고(테이블 마지막 줄 등) 위쪽 공간이 더 넓으면 위로 뒤집어서
+  // 연다 — 안 그러면 화면 하단 근처에서 열린 메뉴가 뷰포트 밖으로 잘려나간다.
+  const MENU_MAX_HEIGHT = 260;
+  const [openUpward, setOpenUpward] = React.useState(false);
+  React.useLayoutEffect(() => {
+    if (!open || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    setOpenUpward(spaceBelow < MENU_MAX_HEIGHT + 4 && spaceAbove > spaceBelow);
+  }, [open]);
+
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block", ...style }}>
       {trigger === "icon" ? (
@@ -36,9 +48,11 @@ export function ButtonDropdown({ items = [], children = "작업", variant = "nor
           role="menu"
           style={{
             position: "absolute",
-            top: "calc(100% + 4px)",
+            ...(openUpward ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
             right: 0,
             minWidth: "180px",
+            maxHeight: `${MENU_MAX_HEIGHT}px`,
+            overflowY: "auto",
             background: "var(--decs-white)",
             border: "1px solid var(--decs-border-divider)",
             borderRadius: "var(--decs-radius-item)",
