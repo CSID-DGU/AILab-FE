@@ -55,4 +55,11 @@ export const requestService = {
   getDashboardServers: (status = "ALL") =>
     apiClient.get("/api/dashboard/me/servers", { status }),
   getApprovedRequests: () => apiClient.get("/api/requests/my/approved"),
+
+  rebootRequest: (requestId) =>
+    apiClient.post(`/api/requests/${requestId}/reboot`, {}, {
+      // config-server가 새 Pod 생성을 확인할 때까지 기다리는 admin migrate 호출과 동일한
+      // 타임아웃을 쓴다 — 재부팅도 내부적으로 같은 /migrate 경로를 탄다.
+      signal: AbortSignal.timeout(600_000),
+    }),
 };

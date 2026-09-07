@@ -30,6 +30,7 @@ const STATUS_MAP = {
   FULFILLED: { type: "success", key: "running" },
   DENIED: { type: "error", key: "denied" },
   MIGRATING: { type: "in-progress", key: "migrating" },
+  REBOOTING: { type: "in-progress", key: "rebooting" },
   DELETED: { type: "stopped", key: "deleted" },
   "lookup-failed": { type: "error", key: "lookup-failed" },
 };

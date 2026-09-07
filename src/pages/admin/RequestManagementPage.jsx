@@ -32,8 +32,14 @@ const STATUS_META = {
   PROCESSING: { type: "in-progress", label: "처리중" },
   FULFILLED: { type: "success", label: "승인됨" },
   DENIED: { type: "error", label: "거절됨" },
+  MIGRATING: { type: "in-progress", label: "마이그레이션 중" },
+  REBOOTING: { type: "in-progress", label: "재시작 중" },
   DELETED: { type: "stopped", label: "삭제됨" },
 };
+
+// 탭/카운트를 이 목록 하나로 유도해, 신규 상태값이 추가돼도 여기 한 곳만 고치면
+// 목록 어딘가에서 행이 조용히 사라지는 일이 없다.
+const STATUS_ORDER = Object.keys(STATUS_META);
 
 const renderStatus = (status) => {
   const meta = STATUS_META[status];
@@ -158,13 +164,9 @@ const RequestManagementPage = () => {
     .filter((request) => request.status === filter)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  const statusCounts = {
-    PENDING: requestsInPeriod.filter((r) => r.status === "PENDING").length,
-    PROCESSING: requestsInPeriod.filter((r) => r.status === "PROCESSING").length,
-    FULFILLED: requestsInPeriod.filter((r) => r.status === "FULFILLED").length,
-    DENIED: requestsInPeriod.filter((r) => r.status === "DENIED").length,
-    DELETED: requestsInPeriod.filter((r) => r.status === "DELETED").length,
-  };
+  const statusCounts = Object.fromEntries(
+    STATUS_ORDER.map((status) => [status, requestsInPeriod.filter((r) => r.status === status).length])
+  );
 
   const hasMore = visibleCount < filteredRequests.length;
   const pageRequests = filteredRequests.slice(0, visibleCount);
@@ -476,6 +478,8 @@ const RequestManagementPage = () => {
             { key: "PENDING", label: "대기중" },
             { key: "PROCESSING", label: "처리중" },
             { key: "FULFILLED", label: "승인됨" },
+            { key: "MIGRATING", label: "마이그레이션 중" },
+            { key: "REBOOTING", label: "재시작 중" },
             { key: "DENIED", label: "거절됨" },
             { key: "DELETED", label: "삭제됨" },
           ].map((tab) => ({

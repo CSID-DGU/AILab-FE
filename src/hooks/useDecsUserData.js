@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { requestService } from "../services/requestService";
-import { mapUserServer, daysLeft } from "../utils/decsMapper";
+import { mapUserServer, mapPodStatus, daysLeft } from "../utils/decsMapper";
 
 const ERROR_MESSAGE = "실데이터를 불러오지 못해 예시 데이터를 표시합니다.";
 
@@ -19,10 +19,10 @@ function formatExpiresText(expiresAt) {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 만료`;
 }
 
+// PENDING/FULFILLED 외의 값(PROCESSING, MIGRATING, REBOOTING 등)을 전부 "거절됨"으로
+// 잘못 표시하던 자체 매핑을 없애고, 서버 상태와 동일한 단일 소스(mapPodStatus)를 쓴다.
 function getStatusLabel(status) {
-  if (status === "PENDING") return "대기중";
-  if (status === "FULFILLED") return "승인됨";
-  return "거절됨";
+  return mapPodStatus(status).label;
 }
 
 function mapActivity(request) {
@@ -123,8 +123,9 @@ export function useDecsUserData() {
   const [groupOptions, setGroupOptions] = useState(undefined);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(({ signal } = {}) => {
     let cancelled = false;
+    if (signal) signal.addEventListener("abort", () => { cancelled = true; });
 
     Promise.allSettled([
       requestService.getApprovedRequests(),
@@ -223,11 +224,13 @@ export function useDecsUserData() {
         setError(ERROR_MESSAGE);
       }
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    load({ signal: controller.signal });
+    return () => controller.abort();
+  }, [load]);
 
   const server = servers?.[0];
   const expiryDays =
@@ -235,5 +238,5 @@ export function useDecsUserData() {
       ? server.daysLeft
       : null;
 
-  return { server, servers, expiryDays, activities, gpuOptions, envOptions, groupOptions, error };
+  return { server, servers, expiryDays, activities, gpuOptions, envOptions, groupOptions, error, refetch: load };
 }
