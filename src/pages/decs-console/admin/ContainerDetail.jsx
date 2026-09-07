@@ -72,19 +72,23 @@ function ContainerDetail({ item, onBack, onRefetch }) {
       return;
     }
     let cancelled = false;
+    let timeoutId;
+    // setInterval 대신 매 응답을 받은 뒤에만 다음 폴링을 예약한다 — 네트워크 지연으로
+    // 요청이 겹치면 먼저 보낸(오래된 단계) 응답이 나중에 도착해 최신 단계를 덮어쓸 수 있다.
     const poll = async () => {
       try {
         const res = await podService.getProvisioningStatus(c.name);
         if (!cancelled) setMigrationStatus(res?.data ?? null);
       } catch {
         // ignore
+      } finally {
+        if (!cancelled) timeoutId = setTimeout(poll, 1000);
       }
     };
     poll();
-    const interval = setInterval(poll, 1000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      clearTimeout(timeoutId);
     };
   }, [isMigrating, c?.name]);
 
